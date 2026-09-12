@@ -18,17 +18,20 @@ is recognized** notifies **all subscribed Telegram users**:
 ```
 Schedule (5 min) → HTTP GET http://192.168.178.106:8011/recognize
   → IF $json.rabbit == true
-      true:  base64 `image` → binary → one item per subscribed user
-            → IF sendPhoto
-                true:  Telegram sendPhoto (caption = timestamp text)
-                false: Telegram sendText (no photo)
+      true:  base64 `image` → binary → one item per user with images on
+            → Telegram sendPhoto (caption = timestamp text)
       false: NoOp (nothing is sent)
 ```
 
-Each user's settings (`subscribed`, `images`) are stored per chat id
-in workflow static data: `state.users['user-<chatId>']`. They are
-created on first contact with the bot (default: active + with photo)
-and changed via the commands below. Until someone has contacted the
+**Foto oder nichts:** An erkannte Hasen gibt es ausschließlich Fotos.
+Wird ein Benutzer nicht angesprochen (`/kein-bild`) oder liegen gar
+keine Bild-Daten vor (`include_image = false`), wird nichts gesendet —
+nie eine reine Textnachricht.
+
+Each user's setting (`images`) is stored per chat id in workflow
+static data: `state.users['user-<chatId>'] = { images }`. It is
+created on first contact with the bot (default: images on) and
+changed via the commands below. Until someone has contacted the
 bot, nothing is sent.
 
 ### Branch 2: Telegram commands (per user)
@@ -37,11 +40,11 @@ bot, nothing is sent.
 Telegram Trigger (messages, any user) → command code → Telegram sendText (confirmation)
 ```
 
-- `/start` — resume notifications
-- `/stop` — pause notifications
 - `/bild` — receive photos when a rabbit is detected
-- `/kein-bild` — text only, no photos
-- `/status` — show the current settings
+- `/kein-bild` — receive nothing (photos off)
+- `/start` — alias for `/bild`
+- `/stop` — alias for `/kein-bild`
+- `/status` — show the current setting
 - `/hilfe` — command overview
 
 Every user manages only their own subscription. An optional allow
@@ -63,8 +66,8 @@ restrict which Telegram ids may use the bot.
 ### Adjustment points
 
 - **Schedule**: interval in the first node (default 5 min).
-- **Recipients**: per-user settings in workflow static data; users
-  subscribe by messaging the bot (commands above).
+- **Recipients**: per-user photo settings in workflow static data;
+  users switch them by messaging the bot (commands above).
 - **Authorized controllers**: `ALLOWED` list in the "Kommandos
   verarbeiten" code node (empty = everyone).
 - **Threshold**: append `?threshold=0.7` to the HTTP node URL.
@@ -75,7 +78,8 @@ restrict which Telegram ids may use the bot.
 - The HTTP node has *never fail* set: if the service is down, that run
   simply stops — visible in the Execution list, no error spam.
 - The base64 frame is only present when `include_image = true`
-  (default in `config.toml`).
+  (default in `config.toml`). Without it, a detected rabbit triggers
+  no message at all — never a text-only fallback.
 - The Telegram Trigger registers the bot's webhook when activated —
   hence step 1 (old flows off) is required.
 
@@ -92,8 +96,8 @@ sending it to Telegram. Use both, one, or neither.
 - [ ] New workflow imported + activated (replaces the single-user
       version: after import, delete the old workflow so only one
       workflow holds the bot's webhook)
-- [ ] `/status`, `/stop`, `/start`, `/bild`, `/kein-bild` work per user
-- [ ] Second Telegram account can subscribe independently; `/status`
-      reflects each user's own settings
-- [ ] A recognized rabbit delivers a photo (users with `/bild`) or
-      text (users with `/kein-bild`); none while paused
+- [ ] `/status`, `/bild`, `/kein-bild` work per user
+- [ ] Second Telegram account can toggle independently; `/status`
+      reflects each user's own setting
+- [ ] A recognized rabbit delivers a photo (users with `/bild`);
+      users with `/kein-bild` receive nothing — never text
