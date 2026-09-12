@@ -145,7 +145,7 @@ and in this repo's venvs); `.json` works on any version.
 RabbitRecognition/
 ├── CONCEPT.md                  # this document
 ├── README.md                   # user-facing setup & usage docs
-├── Taskfile.yml                # install / run / rc-local-check / rc-local-add
+├── Taskfile.yml                # install / run / stop / status / rc-local-*
 ├── config.toml                 # default configuration file
 ├── .env.template               # environment overrides template
 ├── requirements.txt            # fastapi, uvicorn, onnxruntime, opencv-headless, numpy, requests
@@ -225,14 +225,16 @@ Primary (matches the existing pi4 setup): boot autostart via
 
 - `Taskfile.yml`:
   - `install` — venv + dependencies + `.env` (from template if missing)
-  - `run` — start the API in the foreground (what rc.local invokes)
+  - `run` — start the API as a detached background process
+    (`nohup … &`; pid: `run.pid`, log: `run.log`; refuses to double-start)
+  - `stop` / `status` — manage the detached process via `run.pid`
   - `rc-local-check` — read-only check for the rc.local entry
   - `rc-local-add` — idempotent registration (sudo; inserts before
     `exit 0` if present, appends otherwise, no-op when already present)
-- Line written (`&` because rc.local runs lines sequentially; `nohup`
-  survives the `su -` login shell exit — uvicorn treats SIGHUP as
-  shutdown; log goes to `run.log`; no auto-restart after crash):
-  `su - fabi -c 'cd /home/fabi/RabbitRecognition && nohup task run >> run.log 2>&1 &'`
+- Line written (plain, same style as the other pi4 entries; `task run`
+  detaches itself, so rc.local never blocks; no auto-restart after
+  crash — start manually with `task run`):
+  `su - fabi -c 'cd /home/fabi/RabbitRecognition && task run'`
 - Pi prerequisites: go-task + Python 3.11.
 
 The service binds `0.0.0.0:8011` so n8n (same host, other network
@@ -287,7 +289,7 @@ namespace) can reach it.
 | 17 | Import n8n workflow + adjust schedule/URL (user action) | 👤 |
 | 18 | Live verification against camera stream on Pi | ⬜ |
 | 19 | Hasen-Stream cleanup branch (remove recognition/watcher) | ✅ (`feature/separate-rabbit-recognition-functionality` @ `da57fd0`) |
-| 20 | Taskfile (install/run/rc-local-check/rc-local-add) | ✅ |
+| 20 | Taskfile (install/run/stop/status/rc-local-check/rc-local-add) | ✅ |
 | 21 | n8n notification flow (Telegram photo + /stop /start /status) | ✅ |
 | 22 | n8n audit extensions (thumbnail on "no rabbit", §7 backlog) | ⬜ |
 | 23 | First `task rc-local-add` + boot verification on the Pi | 👤 |

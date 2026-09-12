@@ -25,7 +25,7 @@ Design and status of everything planned lives in
 ```
 .
 ├── CONCEPT.md               # central design & status document
-├── Taskfile.yml             # install / run / rc-local-check / rc-local-add
+├── Taskfile.yml             # install / run / stop / status / rc-local-*
 ├── config.toml              # default configuration file (see below)
 ├── .env.template            # env-var overrides template
 ├── rabbit_recognition/      # Python package
@@ -187,7 +187,9 @@ git clone git@github.com:FabianSieper/RabbitRecognition.git
 cd RabbitRecognition
 
 task install        # venv + dependencies + .env (from template)
-task run            # start in the foreground to verify (Ctrl-C stops it)
+task run            # start the service (detached; log: run.log, pid: run.pid)
+task status         # is it running?
+task stop           # stop the detached service
 
 task rc-local-check # check whether it is already in /etc/rc.local
 task rc-local-add   # register for boot (idempotent; asks for sudo once)
@@ -201,26 +203,20 @@ curl http://127.0.0.1:8011/health
 exists:
 
 ```
-su - fabi -c 'cd /home/fabi/RabbitRecognition && nohup task run >> run.log 2>&1 &'
+su - fabi -c 'cd /home/fabi/RabbitRecognition && task run'
 ```
 
-Two details matter here:
-- `&` is required — rc.local executes lines sequentially, so the
-  service must be backgrounded or the next line would never start.
-- `nohup` keeps the service alive when the `su -` login shell exits
-  (without it, uvicorn would receive SIGHUP and shut down).
-- `task run` itself stays a plain foreground command, so it remains
-  handy for manual testing (Ctrl-C stops it).
-
-The backgrounded service's log lives next to the repo:
+`task run` detaches itself: it starts the API with `nohup … &` and
+records `run.pid`, so a plain rc.local line is enough (same style as
+the other entries there). Starting it a second time is refused
+(`task stop` first).
 
 ```bash
-tail -f run.log
+tail -f run.log    # service log
 ```
 
 Note: rc.local does not restart the service after a crash — in that
-case start it manually with `task run` (it stays in the foreground
-until Ctrl-C).
+case start it manually with `task run`.
 
 Prerequisites on the Pi: `task` (go-task) and Python 3.11.
 

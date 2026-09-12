@@ -6,6 +6,8 @@ Run with:  python -m rabbit_recognition.api
 from __future__ import annotations
 
 import logging
+import os
+from pathlib import Path
 from typing import Literal
 
 import uvicorn
@@ -19,6 +21,8 @@ from .frame_fetcher import FETCHERS  # noqa: F401  (available for reuse)
 from .service import RabbitRecognitionService
 
 log = logging.getLogger("rabbit-recognition")
+
+PID_FILE = Path(__file__).resolve().parent.parent / "run.pid"
 
 
 def create_app(
@@ -118,6 +122,10 @@ app = create_app()
 def main() -> None:
     settings = load_settings()
     logging.basicConfig(level=settings.log_level, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    try:
+        PID_FILE.write_text(f"{os.getpid()}\n")
+    except OSError:
+        pass  # run.pid is only needed for `task stop` / `task status`
     log.info(
         "rabbit-recognition: serving HTTP API on %s:%s (stream: %s)",
         settings.host, settings.port, settings.stream_url,

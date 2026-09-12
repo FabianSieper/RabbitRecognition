@@ -1,5 +1,10 @@
 version: "3"
 
+# NOTE: Taskfile >= 3.4x executes commands with its own "gosh" interpreter,
+# which has no `kill` builtin - all signal handling below therefore uses
+# the external /bin/kill (works under gosh and any real shell alike).
+# Background processes started here are detached via nohup.
+
 tasks:
   install:
     desc: Create venv, install dependencies, create .env from template if missing
@@ -9,18 +14,50 @@ tasks:
       - test -f .env || cp .env.template .env
 
   run:
-    desc: Start the HTTP service (foreground) - this is what /etc/rc.local invokes
+    desc: "Start the HTTP service as a detached background process (log: run.log, pid: run.pid)"
     preconditions:
       - cmds: ["test -d venv"]
         msg: "venv not found - run `task install` first"
     cmds:
-      - ./venv/bin/python -m rabbit_recognition.api
+      - |
+        if [ -f run.pid ] && /bin/kill -0 "$(cat run.pid)" 2>/dev/null; then
+          echo "already running (pid $(cat run.pid)) - run task stop first"
+          exit 1
+        fi
+        # the API process writes run.pid itself (works in any shell,
+        # unlike `echo $!` which is shell-dependent)
+        nohup ./venv/bin/python -m rabbit_recognition.api >> run.log 2>&1 &
+        # give the process a moment to start before the task exits
+        sleep 2
+        echo "started - log: run.log (pid file: run.pid)"
+
+  stop:
+    desc: Stop the detached service (if running)
+    cmds:
+      - |
+        if [ -f run.pid ] && /bin/kill -0 "$(cat run.pid)" 2>/dev/null; then
+          /bin/kill "$(cat run.pid)"
+          echo "stopped (pid $(cat run.pid))"
+        else
+          echo "not running"
+        fi
+        rm -f run.pid
+
+  status:
+    desc: Show whether the detached service is running
+    cmds:
+      - |
+        if [ -f run.pid ] && /bin/kill -0 "$(cat run.pid)" 2>/dev/null; then
+          echo "running (pid $(cat run.pid))"
+        else
+          echo "not running"
+        fi
 
   rc-local-check:
     desc: Check whether RabbitRecognition is registered in /etc/rc.local (read-only)
     cmds:
       - |
-        if grep -qF "su - fabi -c 'cd /home/fabi/RabbitRecognition && nohup task run >> run.log 2>&1 &'" /etc/rc.local 2>/dev/null; then
+        if grep -qF "su - fabi -c 'cd /home/fabi/RabbitRecognition && task run'" /etc/rc.local 2>/dev/null; then
           echo "OK   /etc/rc.local: RabbitRecognition is registered"
         else
           echo "MISS /etc/rc.local: RabbitRecognition is not registered (task rc-local-add)"
@@ -30,10 +67,9 @@ tasks:
     desc: Register RabbitRecognition in /etc/rc.local (idempotent, needs sudo)
     cmds:
       - |
-        # rc.local runs lines sequentially, so the service is backgrounded
-        # ('&'); nohup keeps it alive when the su login shell exits
-        # (uvicorn treats SIGHUP as shutdown) and run.log is its log file
-        line="su - fabi -c 'cd /home/fabi/RabbitRecognition && nohup task run >> run.log 2>&1 &'"
+        # 'task run' detaches itself (nohup + background + pid file),
+        # so a plain line is enough and matches the other entries
+        line="su - fabi -c 'cd /home/fabi/RabbitRecognition && task run'"
         if grep -qF "$line" /etc/rc.local 2>/dev/null; then
           echo "OK   already registered - nothing to do"
         elif grep -qE '^exit 0' /etc/rc.local 2>/dev/null; then
