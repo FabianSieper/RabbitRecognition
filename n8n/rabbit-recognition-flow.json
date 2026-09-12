@@ -1,0 +1,166 @@
+{
+  "name": "Rabbit Recognition",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      },
+      "id": "BB4CD6FC-0EB6-445F-ABA3-2E7B27706E79",
+      "name": "Rabbit Check (5 min)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "url": "http://192.168.178.106:8011/recognize",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "3A667731-ECCD-4CC7-92CA-F4BC3FC03940",
+      "name": "Call RabbitRecognition",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-rabbit",
+              "leftValue": "={{ $json.rabbit }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              },
+              "logic": "and"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "8667BB0C-A417-488A-AAEA-1B6675DFC910",
+      "name": "Rabbit visible?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "operation": "toBinary",
+        "sourceProperty": "image",
+        "options": {
+          "fileName": "=rabbit_{{ $now.toFormat('yyyyMMdd_HHmmssSSS') }}.jpg",
+          "mimeType": "image/jpeg"
+        }
+      },
+      "id": "7E0A2AE0-05A0-4A79-9B73-E9AEAA8A90BA",
+      "name": "Base64 to Binary",
+      "type": "n8n-nodes-base.moveBinaryData",
+      "typeVersion": 1,
+      "position": [660, -120]
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "/home/fabi/rabbits/frames",
+        "fileNameSuffix": "=rabbit_{{ $now.toFormat('yyyyMMdd_HHmmssSSS') }}.jpg",
+        "options": {
+          "append": false,
+          "dataPropertyName": "data"
+        }
+      },
+      "id": "5954A7C7-EB5D-4BB4-9BC2-9DC714B44806",
+      "name": "Save rabbit frame",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [880, -120]
+    },
+    {
+      "parameters": {},
+      "id": "1780E70C-59D9-4BFE-A82D-5E03DA379B56",
+      "name": "No rabbit",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [660, 120]
+    }
+  ],
+  "connections": {
+    "Rabbit Check (5 min)": {
+      "main": [
+        [
+          {
+            "node": "Call RabbitRecognition",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call RabbitRecognition": {
+      "main": [
+        [
+          {
+            "node": "Rabbit visible?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rabbit visible?": {
+      "main": [
+        [
+          {
+            "node": "Base64 to Binary",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No rabbit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Base64 to Binary": {
+      "main": [
+        [
+          {
+            "node": "Save rabbit frame",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1.0.0",
+  "meta": {
+    "instanceId": "E4458DD2-C274-46EA-BA7A-CF8ED4E90C2E"
+  },
+  "tags": []
+}

@@ -1,0 +1,16 @@
+[Unit]
+Description=RabbitRecognition - rabbit frame classifier HTTP service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=fabi
+WorkingDirectory=/home/fabi/RabbitRecognition
+EnvironmentFile=/home/fabi/RabbitRecognition/.env
+ExecStart=/home/fabi/RabbitRecognition/venv/bin/python -m rabbit_recognition.api
+Restart=on-failure
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target

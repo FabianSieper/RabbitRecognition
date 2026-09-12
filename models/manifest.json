@@ -1,0 +1,39 @@
+{
+  "name": "mobilenet_v2_rabbit",
+  "architecture": "torchvision MobileNetV2 (fine-tuned binary head, sigmoid output)",
+  "input": {
+    "name": "input",
+    "size": [
+      224,
+      224
+    ],
+    "channels": 3,
+    "format": "CHW float32, RGB, scaled to 0-1, ImageNet normalized",
+    "mean": [
+      0.485,
+      0.456,
+      0.406
+    ],
+    "std": [
+      0.229,
+      0.224,
+      0.225
+    ]
+  },
+  "output": {
+    "name": "rabbit_probability",
+    "shape": [
+      1
+    ],
+    "description": "sigmoid probability that a rabbit is visible"
+  },
+  "default_threshold": 0.5,
+  "trained": {
+    "date": "2026-09-10",
+    "positive": 529,
+    "negative": 26,
+    "source": "labeled TestData (RabbitPictures / NoRabbitPictures)",
+    "epochs": 8,
+    "seed": 1337
+  }
+}

@@ -1,0 +1,1 @@
+"""Local test doubles (mock of the Hasen-Stream backend)."""

@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Environment
+.env
+
+# Local artifacts
+saved_images/
+*.jpg
+*.jpeg
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/

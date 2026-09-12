@@ -1,0 +1,33 @@
+# RabbitRecognition configuration.
+#
+# Precedence: environment variables (e.g. .env / systemd EnvironmentFile)
+#             > this file > built-in defaults.
+# Every key is optional; omitted keys fall back to the values shown here.
+# Point RABBIT_CONFIG at another file to override this one.
+
+[stream]
+# Base URL of the Hasen-Stream backend on the camera Pi (same LAN).
+# Port 8000 hits the FastAPI backend directly; port 3000 is the nginx front.
+url = "http://192.168.178.135:8000"
+# Endpoint used to pull a single frame: "mjpeg" (default) or "save".
+method = "mjpeg"
+# Seconds to wait for one frame to arrive.
+timeout = 20
+
+[model]
+# Path to the ONNX model (relative paths resolve against the repo root).
+path = "models/mobilenet_v2_rabbit.onnx"
+# Probability threshold for "rabbit visible".
+# Omit this key (or set null in a .json config) to use the model default 0.5.
+# threshold = 0.5
+# ONNX Runtime intra-op threads (2 is a good default on a Pi).
+num_threads = 2
+
+[service]
+# HTTP API bind address + port (n8n on the same Pi calls /recognize here).
+host = "0.0.0.0"
+port = 8011
+# Logging verbosity: DEBUG, INFO, WARNING, ERROR.
+log_level = "INFO"
+# Include the base64-encoded frame in the /recognize JSON payload.
+include_image = true
