@@ -29,11 +29,18 @@ Wird ein Benutzer nicht angesprochen (`/stop`) oder liegen gar
 keine Bild-Daten vor (`include_image = false`), wird nichts gesendet —
 nie eine reine Textnachricht.
 
-Each user's setting (`images`) is stored per chat id in workflow
-static data: `state.users['user-<chatId>'] = { images }`. It is
-created on first contact with the bot (default: images on) and
-changed via the commands below. Until someone has contacted the
-bot, nothing is sent.
+Each user's subscription is stored in the n8n Data Table
+`rabbit_subscriptions`, one row per Telegram chat:
+
+| Column       | Type      | Meaning                                      |
+|--------------|-----------|----------------------------------------------|
+| `chatId`     | String    | Telegram chat id of the subscriber           |
+| `images`     | Boolean   | `true` = receive rabbit photos               |
+| `updatedAt`  | DateTime  | Timestamp of the last `/start`/`/stop`       |
+
+`/start` and `/stop` upsert the row; `/status` reads it. The photo
+branch sends to all rows with `images = true`. Until a row exists,
+nothing is sent.
 
 ### Branch 2: Telegram commands (per user)
 
@@ -53,23 +60,33 @@ Every user manages only their own subscription. An optional allow
 list (`ALLOWED` in the command code node, empty = everyone) can
 restrict which Telegram ids may use the bot.
 
-### Setup (3 steps)
+### Setup (4 steps, in this order)
 
 1. **Deactivate the old flows first** (same bot → only one workflow
    can hold the Telegram webhook): the old Hasen-Stream flows
    ("image-upload" webhook and the command flow) must be turned off or
    deleted before activating the new one.
-2. **Import**: Workflows → Import from File →
+2. **Create the Data Table**: in the n8n left navigation open
+   **Data Tables** and create a table named exactly
+   `rabbit_subscriptions`. Add these three columns manually:
+   - `chatId` — String
+   - `images` — Boolean
+   - `updatedAt` — DateTime
+
+   If `rabbit_subscriptions` already exists but is empty, open it and
+   add the same three columns. The workflow resolves the table by
+   name, but it does **not** create missing columns automatically.
+3. **Import**: Workflows → Import from File →
    `rabbit-recognition-telegram.json`. On any instance other than the
    current one, open both Telegram nodes and re-select your Telegram
    credential.
-3. **Activate** the workflow (toggle in the workflow list). Done.
+4. **Activate** the workflow (toggle in the workflow list). Done.
 
 ### Adjustment points
 
 - **Schedule**: interval in the first node (default 5 min).
-- **Recipients**: per-user photo settings in workflow static data;
-  users switch them by messaging the bot (commands above).
+- **Recipients**: rows in the `rabbit_subscriptions` Data Table;
+  users switch their own row by messaging the bot (commands above).
 - **Authorized controllers**: `ALLOWED` list in the "Kommandos
   verarbeiten" code node (empty = everyone).
 - **Threshold**: append `?threshold=0.7` to the HTTP node URL.
@@ -84,6 +101,9 @@ restrict which Telegram ids may use the bot.
   no message at all — never a text-only fallback.
 - The Telegram Trigger registers the bot's webhook when activated —
   hence step 1 (old flows off) is required.
+- If a Data Table node fails, open the execution and check whether
+  `rabbit_subscriptions` exists with `chatId`, `images`, and
+  `updatedAt` with the correct types.
 
 ## `rabbit-recognition-flow.json` — frame persistence
 
@@ -95,6 +115,8 @@ sending it to Telegram. Use both, one, or neither.
 ## Migration checklist
 
 - [ ] Old Hasen-Stream flows deactivated/deleted in n8n
+- [ ] Data Table `rabbit_subscriptions` exists with `chatId`
+      (String), `images` (Boolean), and `updatedAt` (DateTime)
 - [ ] New workflow imported + activated (replaces the single-user
       version: after import, delete the old workflow so only one
       workflow holds the bot's webhook)

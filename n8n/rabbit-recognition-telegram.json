@@ -12,13 +12,13 @@
           ]
         }
       },
-      "id": "b7e1f2a3-0001-4c5d-9e6f-2a3b4c5d6e7f",
+      "id": "c43e86c2-b4c2-42f0-8e3f-e3735b099203",
       "name": "Alle 5 Minuten",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [
-        -600,
-        -160
+        -60,
+        -260
       ]
     },
     {
@@ -33,13 +33,13 @@
           }
         }
       },
-      "id": "b7e1f2a3-0002-4c5d-9e6f-2a3b4c5d6e7f",
+      "id": "508ed2e7-3efc-44ba-96f9-b08b63c09e60",
       "name": "RabbitRecognition anfragen",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -380,
-        -160
+        180,
+        -260
       ]
     },
     {
@@ -67,13 +67,13 @@
         },
         "options": {}
       },
-      "id": "b7e1f2a3-0003-4c5d-9e6f-2a3b4c5d6e7f",
+      "id": "eb10986b-6591-4d2c-9b08-81e340bca338",
       "name": "Hase erkannt?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        -160,
-        -160
+        420,
+        -260
       ]
     },
     {
@@ -82,20 +82,20 @@
         "sourceProperty": "image",
         "options": {}
       },
-      "id": "b7e1f2a3-0004-4c5d-9e6f-2a3b4c5d6e7f",
+      "id": "df155a56-4acf-47dc-ad93-e71bf9dc79ab",
       "name": "Bild aus Base64",
       "type": "n8n-nodes-base.convertToFile",
       "typeVersion": 1.1,
       "position": [
-        60,
+        660,
         -260
       ]
     },
     {
       "parameters": {
-        "jsCode": "const state = $getWorkflowStaticData('global');\nconst users = state.users ?? {};\n\n// Eintreffendes Item (mit dem binären Bild, falls vorhanden).\n// Der Convert-to-File-Node schreibt ins Property data - generisch lesen.\nconst item = $input.first();\nconst binary = item.binary ?? {};\nconst image = Object.values(binary)[0];\n\n// Diagnose: erscheint in den Execution-Logs (n8n UI: Execution, Node, View Logs).\nconst active = Object.values(users).filter((u) => u?.images === true || u?.images === 'true');\nconsole.log('Empfänger auflösen: ' + Object.keys(users).length + ' Benutzer registriert, ' + active.length + ' mit Bildern an, Bild vorhanden: ' + Boolean(image));\n\n// Ohne Bild-Daten (z. B. include_image = false) wird gar nichts\n// gesendet - nie eine Textnachricht.\nif (!image) return [];\n\nconst time = new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC';\nconst text = `🐰 Hase entdeckt – ${time}`;\n\n// Ausgabe: ein Item pro Benutzer mit aktiven Bildern.\n// n8n-Item-Format: { json: {...}, binary: {...} }.\n// Ohne json-Wrapper löst der Telegram-Node $json.chatId nicht auf.\nconst recipients = Object.entries(users)\n  .filter(([, user]) => user?.images === true || user?.images === 'true')\n  .map(([key]) => ({\n    json: {\n      chatId: key.replace(/^user-/, ''),\n      text,\n    },\n    binary: { image },\n  }));\n\nreturn recipients;"
+        "jsCode": "const time = new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC';\nreturn $input.all()\n  .filter((item) => (item.json.images === true || item.json.images === 'true') && item.binary?.image)\n  .map((item) => ({\n    json: {\n      chatId: String(item.json.chatId ?? ''),\n      time,\n    },\n    binary: { image: item.binary.image },\n  }));"
       },
-      "id": "b7e1f2a3-0005-4c5d-9e6f-2a3b4c5d6e7f",
+      "id": "c17bc76c-9112-4177-bff4-da8620b09797",
       "name": "Empfänger auflösen",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -112,7 +112,7 @@
         "binaryPropertyName": "image",
         "additionalFields": {}
       },
-      "id": "b7e1f2a3-0006-4c5d-9e6f-2a3b4c5d6e7f",
+      "id": "9f987805-c059-4df7-b1a0-17aded25afc6",
       "name": "Bild an Telegram senden",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
@@ -129,12 +129,12 @@
     },
     {
       "parameters": {},
-      "id": "b7e1f2a3-0007-4c5d-9e6f-2a3b4c5d6e7f",
+      "id": "98c81b99-e418-4886-8e6f-76f42c3005dc",
       "name": "Kein Hase",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
       "position": [
-        60,
+        420,
         -60
       ]
     },
@@ -145,13 +145,13 @@
         ],
         "additionalFields": {}
       },
-      "id": "b7e1f2a3-0008-4c5d-9e6f-2a3b4c5d6e7f",
+      "id": "8db4bfbe-0827-4def-a71e-8d6d4ed4d3a7",
       "name": "Telegram Kommandos",
       "type": "n8n-nodes-base.telegramTrigger",
       "typeVersion": 1.2,
       "position": [
-        -600,
-        240
+        -400,
+        360
       ],
       "webhookId": "5c6d7e8f-0a1b-4c2d-9e3f-4a5b6c7d8e9f",
       "credentials": {
@@ -163,15 +163,15 @@
     },
     {
       "parameters": {
-        "jsCode": "const state = $getWorkflowStaticData('global');\nstate.users = state.users ?? {};\n\nconst input = $input.first().json;\nconst message = input.message ?? {};\nconst chatId = String(message.chat?.id ?? '');\nconst text = String(message.text ?? '').trim();\nconst command = (text.split(/\\s+/)[0] ?? '').toLowerCase().split('@')[0];\n\nif (!chatId) return [];\n\n// Optional: nur diese Telegram-IDs dürfen die restlichen Befehle nutzen.\n// Leere Liste = jeder Benutzer darf seine eigene Bild-Einstellung verwalten.\nconst ALLOWED = ['632078830']; // z. B. ['123456789', '987654321']\n\n// /chatId funktioniert für jeden, auch ohne Freischaltung.\nif (command === '/chatid') {\n  return [{ json: { chatId, text: chatId } }];\n}\n\nif (ALLOWED.length && !ALLOWED.includes(chatId)) {\n  return [{ json: { chatId, text: 'Deine Telegram-ID ist nicht freigeschaltet. Nutze /chatId, um deine ID zu erhalten, und lass sie im n8n Flow freischalten.' } }];\n}\n\nconst key = `user-${chatId}`;\nconst now = new Date().toISOString();\nconst existing = state.users[key] ?? { images: true };\nstate.users = { ...state.users, [key]: { ...existing, updatedAt: now } };\nconst user = state.users[key];\n\nconsole.log('Kommandos verarbeiten: ' + command + ' state=' + JSON.stringify(state.users));\n\nconst setImages = (images) => {\n  state.users = { ...state.users, [key]: { images, updatedAt: new Date().toISOString() } };\n};\n\n// z. B. an den Bot gesendete Fotos: ohne Text ignorieren\nif (command === '') return [];\n\nconst help = [\n  'Befehle:',\n  '/start – ich möchte Bilder, wenn ein Hase entdeckt wird',\n  '/stop – ich möchte nichts bekommen',\n  '/status – aktuelle Einstellung anzeigen',\n  '/chatId – meine Chat-ID anzeigen',\n].join('\\n');\n\nswitch (command) {\n  case '/start':\n    setImages(true);\n    return [{ json: { chatId, text: '📷 Ich schicke dir Bilder, wenn ein Hase entdeckt wird.' } }];\n  case '/stop':\n    setImages(false);\n    return [{ json: { chatId, text: '⏸ Ich schicke dir nichts mehr.' } }];\n  case '/status': {\n    const current = state.users[key];\n    const on = current ? current.images === true : true;\n    const statusText = on\n      ? '📷 Bilder an: Ich schicke dir Bilder, wenn ein Hase entdeckt wird.'\n      : '⏸ Bilder aus: Ich schicke dir nichts.';\n    return [{ json: { chatId, text: `${statusText}\\nDebug: ${JSON.stringify(state.users)}` } }];\n  }\n  case '/hilfe':\n  case '/help':\n    return [{ json: { chatId, text: help } }];\n  default:\n    return [{ json: { chatId, text: 'Unbekannter Befehl. /hilfe für die Übersicht.' } }];\n}"
+        "jsCode": "const input = $input.first().json;\nconst message = input.message ?? {};\nconst chatId = String(message.chat?.id ?? '');\nconst rawText = String(message.text ?? '').trim();\nconst command = (rawText.split(/\\s+/)[0] ?? '').toLowerCase().split('@')[0];\n\nif (!chatId) return [];\n\nconst ALLOWED = ['632078830'];\n\nif (command === '/chatid') {\n  return [{ json: { chatId, text: chatId, command, route: 0 } }];\n}\n\nif (ALLOWED.length && !ALLOWED.includes(chatId)) {\n  return [{ json: { chatId, command, route: 1, text: 'Deine Telegram-ID ist nicht freigeschaltet. Nutze /chatId, um deine ID zu erhalten, und lass sie im n8n Flow freischalten.' } }];\n}\n\nif (command === '') return [];\n\nif (command === '/hilfe') {\n  return [{ json: {\n    chatId,\n    command,\n    route: 0,\n    text: 'Befehle:\\n/start – Fotos an\\n/stop – Fotos aus\\n/status – aktueller Status\\n/chatid – deine Telegram-ID anzeigen',\n  } }];\n}\n\nif (command === '/start') return [{ json: { chatId, command, images: true, route: 2 } }];\nif (command === '/stop') return [{ json: { chatId, command, images: false, route: 3 } }];\nif (command === '/status') return [{ json: { chatId, command, route: 4 } }];\n\nreturn [{ json: { chatId, command, route: 5, text: 'Unbekannter Befehl. Nutze /hilfe, /start, /stop, /status oder /chatId.' } }];"
       },
-      "id": "b7e1f2a3-0009-4c5d-9e6f-2a3b4c5d6e7f",
+      "id": "13a8f01c-441c-436b-a5e8-0a16b993b002",
       "name": "Kommandos verarbeiten",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -380,
-        240
+        -160,
+        360
       ]
     },
     {
@@ -183,18 +183,254 @@
           "appendAttribution": false
         }
       },
-      "id": "b7e1f2a3-000a-4c5d-9e6f-2a3b4c5d6e7f",
+      "id": "f298acef-56df-42a2-b61b-1994c3adba4b",
       "name": "Kommando bestätigen",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        -160,
-        240
+        80,
+        460
       ],
       "credentials": {
         "telegramApi": {
           "id": "hrff9SdHTUZYVcup",
           "name": "Hasi"
+        }
+      }
+    },
+    {
+      "id": "b7e1f2a3-000b-4c5d-9e6f-2a3b4c5d6e7f",
+      "name": "Befehle routen",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -160,
+        240
+      ],
+      "parameters": {
+        "mode": "expression",
+        "output": "={{ $json.route }}",
+        "numberOutputs": 6,
+        "options": {}
+      }
+    },
+    {
+      "id": "b7e1f2a3-000c-4c5d-9e6f-2a3b4c5d6e7f",
+      "name": "Abonnement speichern",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        80,
+        260
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "upsert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "rabbit_subscriptions"
+        },
+        "matchType": "anyCondition",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "chatId",
+              "condition": "eq",
+              "keyValue": "={{ $json.chatId }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "chatId": "={{ $json.chatId }}",
+            "images": "={{ $json.images }}",
+            "updatedAt": "={{ new Date().toISOString() }}"
+          },
+          "schema": [
+            {
+              "id": "chatId",
+              "displayName": "chatId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "images",
+              "displayName": "images",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "updatedAt",
+              "displayName": "updatedAt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "b7e1f2a3-000d-4c5d-9e6f-2a3b4c5d6e7f",
+      "name": "Abonnement bestätigen",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        320,
+        260
+      ],
+      "parameters": {
+        "text": "={{ $('Kommandos verarbeiten').first().json.text }}",
+        "additionalFields": {},
+        "options": {},
+        "chatId": "={{ $json.chatId }}"
+      }
+    },
+    {
+      "id": "b7e1f2a3-000e-4c5d-9e6f-2a3b4c5d6e7f",
+      "name": "Status laden",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        80,
+        100
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "rabbit_subscriptions"
+        },
+        "matchType": "anyCondition",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "chatId",
+              "condition": "eq",
+              "keyValue": "={{ $json.chatId }}"
+            }
+          ]
+        },
+        "returnAll": false,
+        "limit": 1,
+        "options": {}
+      }
+    },
+    {
+      "id": "b7e1f2a3-000f-4c5d-9e6f-2a3b4c5d6e7f",
+      "name": "Status zusammenführen",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        320,
+        100
+      ],
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "numberInputs": 2,
+        "options": {
+          "includeUnpaired": true,
+          "clashHandling": {
+            "values": {
+              "resolveClash": "preferInput1",
+              "mergeMode": "deepMerge",
+              "overrideEmpty": false
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "b7e1f2a3-0010-4c5d-9e6f-2a3b4c5d6e7f",
+      "name": "Status anzeigen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const item = $input.first().json;\nconst chatId = String(item.chatId ?? '');\nconst hasRow = 'images' in item || 'updatedAt' in item;\nconst images = item.images === true || item.images === 'true';\nlet text;\nif (!hasRow) {\n  text = 'Für ' + chatId + ' ist noch nichts gespeichert. Nutze /start oder /stop.';\n} else if (images) {\n  text = '📷 Bilder an: Ich schicke dir Bilder, wenn ein Hase entdeckt wird.' + (item.updatedAt ? '\\nGeändert: ' + item.updatedAt : '');\n} else {\n  text = '⏸ Bilder aus: Ich schicke dir nichts.' + (item.updatedAt ? '\\nGeändert: ' + item.updatedAt : '');\n}\nreturn [{ json: { chatId, text } }];"
+      }
+    },
+    {
+      "id": "b7e1f2a3-0011-4c5d-9e6f-2a3b4c5d6e7f",
+      "name": "Status antworten",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        800,
+        100
+      ],
+      "parameters": {
+        "text": "={{ $json.text }}",
+        "additionalFields": {},
+        "options": {},
+        "chatId": "={{ $json.chatId }}"
+      }
+    },
+    {
+      "id": "b7e1f2a3-0012-4c5d-9e6f-2a3b4c5d6e7f",
+      "name": "Aktive Empfänger laden",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        900,
+        -400
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "rabbit_subscriptions"
+        },
+        "matchType": "anyCondition",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "images",
+              "condition": "isTrue"
+            }
+          ]
+        },
+        "returnAll": true,
+        "options": {}
+      }
+    },
+    {
+      "id": "b7e1f2a3-0013-4c5d-9e6f-2a3b4c5d6e7f",
+      "name": "Empfänger kombinieren",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1140,
+        -260
+      ],
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "numberInputs": 2,
+        "options": {
+          "clashHandling": {
+            "values": {
+              "resolveClash": "preferLast",
+              "mergeMode": "deepMerge",
+              "overrideEmpty": false
+            }
+          }
         }
       }
     }
@@ -244,9 +480,14 @@
       "main": [
         [
           {
-            "node": "Empfänger auflösen",
+            "node": "Aktive Empfänger laden",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Empfänger kombinieren",
+            "type": "main",
+            "index": 1
           }
         ]
       ]
@@ -277,7 +518,124 @@
       "main": [
         [
           {
+            "node": "Befehle routen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aktive Empfänger laden": {
+      "main": [
+        [
+          {
+            "node": "Empfänger kombinieren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Empfänger kombinieren": {
+      "main": [
+        [
+          {
+            "node": "Empfänger auflösen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Befehle routen": {
+      "main": [
+        [
+          {
             "node": "Kommando bestätigen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Kommando bestätigen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Abonnement speichern",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Abonnement speichern",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Status laden",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Status zusammenführen",
+            "type": "main",
+            "index": 1
+          }
+        ],
+        [
+          {
+            "node": "Kommando bestätigen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Abonnement speichern": {
+      "main": [
+        [
+          {
+            "node": "Abonnement bestätigen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Status laden": {
+      "main": [
+        [
+          {
+            "node": "Status zusammenführen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Status zusammenführen": {
+      "main": [
+        [
+          {
+            "node": "Status anzeigen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Status anzeigen": {
+      "main": [
+        [
+          {
+            "node": "Status antworten",
             "type": "main",
             "index": 0
           }
@@ -285,5 +643,6 @@
       ]
     }
   },
-  "pinData": {}
+  "pinData": {},
+  "active": false
 }
