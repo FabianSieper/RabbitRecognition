@@ -17,8 +17,8 @@
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [
-        -560,
-        0
+        -600,
+        -160
       ]
     },
     {
@@ -38,8 +38,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -340,
-        0
+        -380,
+        -160
       ]
     },
     {
@@ -72,8 +72,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        -120,
-        0
+        -160,
+        -160
       ]
     },
     {
@@ -87,38 +87,97 @@
       "type": "n8n-nodes-base.convertToFile",
       "typeVersion": 1.1,
       "position": [
-        100,
-        -80
+        60,
+        -260
       ]
     },
     {
       "parameters": {
-        "jsCode": "const state = $getWorkflowStaticData('global');\n\n// Wenn /stop gesetzt wurde, hier beenden.\n// Standardmäßig ist der Versand aktiv.\nif (state.telegramPaused === true) {\n  return [];\n}\n\nconst item = $input.first();\nconst binary = item.binary ?? {};\nconst image = binary.image ?? binary.data ?? Object.values(binary)[0];\n\nif (!image) {\n  throw new Error('Kein Bild vorhanden');\n}\n\nreturn [\n  {\n    binary: {\n      image\n    }\n  }\n];"
+        "jsCode": "const state = $getWorkflowStaticData('global');\nconst users = state.users ?? {};\n\n// Eintreffendes Item (mit dem binären Bild, falls vorhanden).\n// Ausgabe: ein Item pro abonniertem Telegram-Benutzer.\nconst item = $input.first();\nconst binary = item.binary ?? {};\nconst image = binary.image ?? Object.values(binary)[0];\nconst hasImage = !!image;\n\nconst time = new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC';\nconst text = `🐰 Hase entdeckt – ${time}`;\n\nconst recipients = [];\nfor (const [key, user] of Object.entries(users)) {\n  if (user.subscribed !== true) continue;\n  const out = {\n    chatId: key.replace(/^user-/, ''),\n    sendPhoto: hasImage && user.images === true,\n    text,\n  };\n  if (hasImage) out.binary = { image };\n  recipients.push(out);\n}\n\n// Hat noch niemand abonniert, wird nichts verschickt.\nreturn recipients;"
       },
       "id": "b7e1f2a3-0005-4c5d-9e6f-2a3b4c5d6e7f",
-      "name": "Pause prüfen + Bild vorbereiten",
+      "name": "Empfänger auflösen",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        320,
-        -80
+        280,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "cond-send-photo",
+              "leftValue": "={{ $json.sendPhoto }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "name": "filter.operator",
+                "singleValue": true,
+                "values": []
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b7e1f2a3-000b-4c5d-9e6f-2a3b4c5d6e7f",
+      "name": "Mit Bild senden?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        500,
+        -260
       ]
     },
     {
       "parameters": {
         "operation": "sendPhoto",
-        "chatId": "632078830",
+        "chatId": "={{ $json.chatId }}",
         "binaryData": true,
         "binaryPropertyName": "image",
-        "additionalFields": {}
+        "additionalFields": {
+          "caption": "={{ $json.text }}"
+        }
       },
       "id": "b7e1f2a3-0006-4c5d-9e6f-2a3b4c5d6e7f",
       "name": "Bild an Telegram senden",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        540,
-        -80
+        720,
+        -340
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "hrff9SdHTUZYVcup",
+          "name": "Hasi"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "b7e1f2a3-000c-4c5d-9e6f-2a3b4c5d6e7f",
+      "name": "Nur Text senden",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        720,
+        -140
       ],
       "credentials": {
         "telegramApi": {
@@ -134,8 +193,8 @@
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
       "position": [
-        100,
-        140
+        60,
+        -60
       ]
     },
     {
@@ -143,18 +202,15 @@
         "updates": [
           "message"
         ],
-        "additionalFields": {
-          "chatIds": "632078830",
-          "userIds": "632078830"
-        }
+        "additionalFields": {}
       },
       "id": "b7e1f2a3-0008-4c5d-9e6f-2a3b4c5d6e7f",
       "name": "Telegram Kommandos",
       "type": "n8n-nodes-base.telegramTrigger",
       "typeVersion": 1.2,
       "position": [
-        -560,
-        320
+        -600,
+        240
       ],
       "webhookId": "5c6d7e8f-0a1b-4c2d-9e3f-4a5b6c7d8e9f",
       "credentials": {
@@ -166,15 +222,15 @@
     },
     {
       "parameters": {
-        "jsCode": "const input = $input.first().json;\nconst message = input.message ?? {};\n\nconst chatId = String(message.chat?.id ?? '');\nconst userId = String(message.from?.id ?? '');\n\n// Sicherheit: Nur dein eigener Telegram-Account darf steuern.\nif (chatId !== '632078830' || userId !== '632078830') {\n  return [];\n}\n\nconst text = String(message.text ?? '').trim();\nconst firstToken = text.split(/\\s+/)[0] ?? '';\nconst command = firstToken.toLowerCase().split('@')[0];\n\nconst state = $getWorkflowStaticData('global');\n\n// Default: Benachrichtigungen sind aktiv\nconst isPaused = state.telegramPaused === true;\n\nif (command === '/stop') {\n  state.telegramPaused = true;\n\n  return [\n    {\n      json: {\n        chatId,\n        text: '⏸ Bildbenachrichtigungen sind pausiert. Mit /start wieder aktivieren.'\n      }\n    }\n  ];\n}\n\nif (command === '/start') {\n  state.telegramPaused = false;\n\n  return [\n    {\n      json: {\n        chatId,\n        text: '▶️ Bildbenachrichtigungen sind aktiviert.'\n      }\n    }\n  ];\n}\n\nif (command === '/status') {\n  return [\n    {\n      json: {\n        chatId,\n        text: isPaused\n          ? '⏸ Status: Bildbenachrichtigungen sind pausiert.'\n          : '▶️ Status: Bildbenachrichtigungen sind aktiviert.'\n      }\n    }\n  ];\n}\n\nreturn [];"
+        "jsCode": "const state = $getWorkflowStaticData('global');\nif (!state.users) state.users = {};\n\nconst input = $input.first().json;\nconst message = input.message ?? {};\nconst chatId = String(message.chat?.id ?? '');\nconst text = String(message.text ?? '').trim();\nconst command = (text.split(/\\s+/)[0] ?? '').toLowerCase().split('@')[0];\n\nif (!chatId) return [];\n\n// Optional: nur diese Telegram-IDs zulassen.\n// Leere Liste = jeder Benutzer darf seine eigene Abo-Einstellung verwalten.\nconst ALLOWED = []; // z. B. ['632078830', '123456789']\nif (ALLOWED.length && !ALLOWED.includes(chatId)) {\n  return [{ json: { chatId, text: 'Deine Telegram-ID ist nicht freigeschaltet.' } }];\n}\n\n// Pro-Benutzer-Einstellung beim ersten Kontakt anlegen.\n// Default: aktiv + mit Bild.\nconst key = `user-${chatId}`;\nif (!state.users[key]) {\n  state.users[key] = { subscribed: true, images: true };\n}\nconst user = state.users[key];\n\n// z. B. an den Bot gesendete Fotos: ohne Text ignorieren\nif (command === '') return [];\n\nconst help = [\n  'Befehle:',\n  '/start – Benachrichtigungen aktivieren',\n  '/stop – Benachrichtigungen pausieren',\n  '/bild – mir Bilder schicken, wenn ein Hase entdeckt wird',\n  '/kein-bild – nur Text, keine Bilder',\n  '/status – aktuelle Einstellungen anzeigen',\n].join('\\n');\n\nswitch (command) {\n  case '/start':\n    user.subscribed = true;\n    return [{ json: { chatId, text: '▶️ Benachrichtigungen sind aktiviert.' } }];\n  case '/stop':\n    user.subscribed = false;\n    return [{ json: { chatId, text: '⏸ Benachrichtigungen sind pausiert.' } }];\n  case '/bild':\n    user.images = true;\n    return [{ json: { chatId, text: '📷 Ich schicke dir Bilder, wenn ein Hase entdeckt wird.' } }];\n  case '/kein-bild':\n    user.images = false;\n    return [{ json: { chatId, text: '📝 Ich schicke dir nur Text, keine Bilder.' } }];\n  case '/status':\n    return [{ json: { chatId, text: `${user.subscribed ? '▶️ aktiviert' : '⏸ pausiert'} · ${user.images ? '📷 mit Bild' : '📝 nur Text'}` } }];\n  case '/hilfe':\n  case '/help':\n    return [{ json: { chatId, text: help } }];\n  default:\n    return [{ json: { chatId, text: 'Unbekannter Befehl. /hilfe für die Übersicht.' } }];\n}"
       },
       "id": "b7e1f2a3-0009-4c5d-9e6f-2a3b4c5d6e7f",
-      "name": "Start Stop verarbeiten",
+      "name": "Kommandos verarbeiten",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -340,
-        320
+        -380,
+        240
       ]
     },
     {
@@ -190,10 +246,9 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        -120,
-        320
+        -160,
+        240
       ],
-      "webhookId": "6d7e8f9a-1b2c-4d3e-8f4a-5b6c7d8e9f0a",
       "credentials": {
         "telegramApi": {
           "id": "hrff9SdHTUZYVcup",
@@ -247,18 +302,36 @@
       "main": [
         [
           {
-            "node": "Pause prüfen + Bild vorbereiten",
+            "node": "Empfänger auflösen",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Pause prüfen + Bild vorbereiten": {
+    "Empfänger auflösen": {
+      "main": [
+        [
+          {
+            "node": "Mit Bild senden?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mit Bild senden?": {
       "main": [
         [
           {
             "node": "Bild an Telegram senden",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Nur Text senden",
             "type": "main",
             "index": 0
           }
@@ -269,14 +342,14 @@
       "main": [
         [
           {
-            "node": "Start Stop verarbeiten",
+            "node": "Kommandos verarbeiten",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Start Stop verarbeiten": {
+    "Kommandos verarbeiten": {
       "main": [
         [
           {

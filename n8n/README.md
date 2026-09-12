@@ -10,31 +10,43 @@ from File**.
 Replaces the old Hasen-Stream flows (webhook "image-upload" and the
 Telegram command flow). It has two branches:
 
-### Branch 1: scheduled recognition
+### Branch 1: scheduled recognition (multi-user)
 
 Every 5 minutes the workflow calls the service and **only if a rabbit
-is recognized** forwards the frame to Telegram — image only, no text:
+is recognized** notifies **all subscribed Telegram users**:
 
 ```
 Schedule (5 min) → HTTP GET http://192.168.178.106:8011/recognize
   → IF $json.rabbit == true
-      true:  base64 `image` → binary → pause check → Telegram sendPhoto (no caption)
+      true:  base64 `image` → binary → one item per subscribed user
+            → IF sendPhoto
+                true:  Telegram sendPhoto (caption = timestamp text)
+                false: Telegram sendText (no photo)
       false: NoOp (nothing is sent)
 ```
 
-### Branch 2: Telegram commands
+Each user's settings (`subscribed`, `images`) are stored per chat id
+in workflow static data: `state.users['user-<chatId>']`. They are
+created on first contact with the bot (default: active + with photo)
+and changed via the commands below. Until someone has contacted the
+bot, nothing is sent.
+
+### Branch 2: Telegram commands (per user)
 
 ```
-Telegram Trigger (messages) → command code → Telegram sendText (confirmation)
+Telegram Trigger (messages, any user) → command code → Telegram sendText (confirmation)
 ```
 
-- `/stop` — pause image notifications
-- `/start` — resume
-- `/status` — show current state
+- `/start` — resume notifications
+- `/stop` — pause notifications
+- `/bild` — receive photos when a rabbit is detected
+- `/kein-bild` — text only, no photos
+- `/status` — show the current settings
+- `/hilfe` — command overview
 
-Only your own account (chat/user `632078830`) can send commands;
-everything else is ignored. Pause state is kept in workflow static
-data (`telegramPaused`) and checked before every photo is sent.
+Every user manages only their own subscription. An optional allow
+list (`ALLOWED` in the command code node, empty = everyone) can
+restrict which Telegram ids may use the bot.
 
 ### Setup (3 steps)
 
@@ -51,10 +63,10 @@ data (`telegramPaused`) and checked before every photo is sent.
 ### Adjustment points
 
 - **Schedule**: interval in the first node (default 5 min).
-- **Recipient**: `chatId` in "Bild an Telegram senden" (pre-filled with
-  the current chat).
-- **Authorized controller**: chat/user id checks in the command code
-  node (and the Trigger's chat/user fields).
+- **Recipients**: per-user settings in workflow static data; users
+  subscribe by messaging the bot (commands above).
+- **Authorized controllers**: `ALLOWED` list in the "Kommandos
+  verarbeiten" code node (empty = everyone).
 - **Threshold**: append `?threshold=0.7` to the HTTP node URL.
 - **Pause (without Telegram)**: deactivate the workflow.
 
@@ -77,8 +89,11 @@ sending it to Telegram. Use both, one, or neither.
 ## Migration checklist
 
 - [ ] Old Hasen-Stream flows deactivated/deleted in n8n
-- [ ] New workflow imported + activated
-- [ ] `/status` → `/stop` → `/start` work, and a recognized rabbit
-      delivers a photo (and none while paused)
-- [ ] Old camera-Pi watcher disabled:
-      `sudo systemctl disable --now hasen-rabbit-watch` on 192.168.178.135
+- [ ] New workflow imported + activated (replaces the single-user
+      version: after import, delete the old workflow so only one
+      workflow holds the bot's webhook)
+- [ ] `/status`, `/stop`, `/start`, `/bild`, `/kein-bild` work per user
+- [ ] Second Telegram account can subscribe independently; `/status`
+      reflects each user's own settings
+- [ ] A recognized rabbit delivers a photo (users with `/bild`) or
+      text (users with `/kein-bild`); none while paused
