@@ -145,6 +145,7 @@ and in this repo's venvs); `.json` works on any version.
 RabbitRecognition/
 ├── CONCEPT.md                  # this document
 ├── README.md                   # user-facing setup & usage docs
+├── Taskfile.yml                # install / run / rc-local-check / rc-local-add
 ├── config.toml                 # default configuration file
 ├── .env.template               # environment overrides template
 ├── requirements.txt            # fastapi, uvicorn, onnxruntime, opencv-headless, numpy, requests
@@ -221,16 +222,26 @@ Remaining backlog (⬜):
 
 ## 8. Deployment
 
-- systemd unit `deploy/rabbit-recognition.service`
-  (`User=fabi`, `WorkingDirectory=/home/fabi/RabbitRecognition`,
-  `EnvironmentFile=.env`, `ExecStart=.../venv/bin/python -m rabbit_recognition.api`,
-  `Restart=on-failure`, `RestartSec=30`).
-- Install steps (Pi): `git clone` → `python3 -m venv venv` →
-  `pip install -r requirements.txt` → copy `.env.template` to `.env` →
-  `systemctl --user install/enable/start rabbit-recognition`.
-  (Concretize as a Taskfile once the layout is final — ⬜)
-- The service binds `0.0.0.0:8011` so n8n (same host, other network
-  namespace) can reach it.
+Primary (matches the existing pi4 setup): boot autostart via
+`/etc/rc.local` + Taskfile:
+
+- `Taskfile.yml`:
+  - `install` — venv + dependencies + `.env` (from template if missing)
+  - `run` — start the API in the foreground (what rc.local invokes)
+  - `rc-local-check` — read-only check for the rc.local entry
+  - `rc-local-add` — idempotent registration (sudo; inserts before
+    `exit 0` if present, appends otherwise, no-op when already present)
+- Line written:
+  `su - fabi -c 'cd /home/fabi/RabbitRecognition && task run'`
+- Pi prerequisites: go-task + Python 3.11.
+
+Alternative: systemd unit `deploy/rabbit-recognition.service`
+(`User=fabi`, `WorkingDirectory=/home/fabi/RabbitRecognition`,
+`EnvironmentFile=.env`, `ExecStart=.../venv/bin/python -m rabbit_recognition.api`,
+`Restart=on-failure`, `RestartSec=30`).
+
+The service binds `0.0.0.0:8011` so n8n (same host, other network
+namespace) can reach it.
 
 ## 9. Testing strategy
 
@@ -277,13 +288,14 @@ Remaining backlog (⬜):
 | 13 | `config.toml` shipped + `.env.template` | ✅ |
 | 14 | README (setup, API, n8n, deployment) | ✅ |
 | 15 | Push repo to GitHub | ✅ (commit `76a8f2d`, branch `main`) |
-| 16 | Deploy to Pi (clone, venv, .env, enable service) | ⬜ |
+| 16 | Deploy to Pi (clone, `task install`, `task rc-local-add`, verify) | ⬜ |
 | 17 | Import n8n workflow + adjust schedule/URL (user action) | 👤 |
 | 18 | Live verification against camera stream on Pi | ⬜ |
 | 19 | Hasen-Stream cleanup branch (remove recognition/watcher) | ✅ (`feature/separate-rabbit-recognition-functionality` @ `da57fd0`) |
-| 20 | Taskfile for Pi install (optional convenience) | ⬜ |
+| 20 | Taskfile (install/run/rc-local-check/rc-local-add) | ✅ |
 | 21 | n8n notification flow (Telegram photo + /stop /start /status) | ✅ |
 | 22 | n8n audit extensions (thumbnail on "no rabbit", §7 backlog) | ⬜ |
+| 23 | First `task rc-local-add` + boot verification on the Pi | 👤 |
 
 ## 12. Open questions / risks
 

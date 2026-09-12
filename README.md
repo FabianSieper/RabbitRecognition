@@ -174,22 +174,44 @@ setup steps and adjustment points:
 
 Both flows are *inactive* by default — activate after import.
 
-## Deploying on the Pi (systemd)
+## Deploying on the Pi (rc.local, same style as the other projects there)
+
+The service starts at boot via `/etc/rc.local` — the same pattern as the
+other `fabi` projects on that Pi
+(`su - fabi -c 'cd /home/fabi/<repo> && task run'`). `Taskfile.yml`
+provides everything, including the rc.local registration:
 
 ```bash
 # on the n8n Pi (user fabi)
 git clone git@github.com:FabianSieper/RabbitRecognition.git
 cd RabbitRecognition
-python3.11 -m venv venv && ./venv/bin/pip install -r requirements.txt
 
-# optional: put your settings into .env (see .env.template)
-cp .env.template .env
+task install        # venv + dependencies + .env (from template)
+task run            # start in the foreground to verify (Ctrl-C stops it)
 
-sudo cp deploy/rabbit-recognition.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now rabbit-recognition
+task rc-local-check # check whether it is already in /etc/rc.local
+task rc-local-add   # register for boot (idempotent; asks for sudo once)
+
+# after a reboot (or start manually via `task run`):
 curl http://127.0.0.1:8011/health
 ```
+
+`task rc-local-add` writes exactly this line (inserted before an
+`exit 0` if present, appended otherwise) and is a no-op when it already
+exists:
+
+```
+su - fabi -c 'cd /home/fabi/RabbitRecognition && task run'
+```
+
+Prerequisites on the Pi: `task` (go-task) and Python 3.11.
+
+### Alternative: systemd
+
+`deploy/rabbit-recognition.service` stays available as an alternative
+(`sudo cp deploy/rabbit-recognition.service /etc/systemd/system/ &&
+sudo systemctl daemon-reload && sudo systemctl enable --now
+rabbit-recognition`).
 
 If port 8011 ever collides with an n8n exposed port, change `RABBIT_PORT`.
 

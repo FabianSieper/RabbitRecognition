@@ -1,0 +1,45 @@
+version: "3"
+
+tasks:
+  install:
+    desc: Create venv, install dependencies, create .env from template if missing
+    cmds:
+      - python3 -m venv venv
+      - ./venv/bin/pip install -r requirements.txt
+      - test -f .env || cp .env.template .env
+
+  run:
+    desc: Start the HTTP service (foreground) - this is what /etc/rc.local invokes
+    preconditions:
+      - cmds: ["test -d venv"]
+        msg: "venv not found - run `task install` first"
+    cmds:
+      - ./venv/bin/python -m rabbit_recognition.api
+
+  rc-local-check:
+    desc: Check whether RabbitRecognition is registered in /etc/rc.local (read-only)
+    cmds:
+      - |
+        if grep -qF "su - fabi -c 'cd /home/fabi/RabbitRecognition && task run'" /etc/rc.local 2>/dev/null; then
+          echo "OK   /etc/rc.local: RabbitRecognition is registered"
+        else
+          echo "MISS /etc/rc.local: RabbitRecognition is not registered (task rc-local-add)"
+        fi
+
+  rc-local-add:
+    desc: Register RabbitRecognition in /etc/rc.local (idempotent, needs sudo)
+    cmds:
+      - |
+        line="su - fabi -c 'cd /home/fabi/RabbitRecognition && task run'"
+        if grep -qF "$line" /etc/rc.local 2>/dev/null; then
+          echo "OK   already registered - nothing to do"
+        elif grep -qE '^exit 0' /etc/rc.local 2>/dev/null; then
+          tmp=$(mktemp)
+          awk -v l="$line" '!done && /^exit 0/ { print l; done = 1 } { print }' /etc/rc.local > "$tmp"
+          sudo cp "$tmp" /etc/rc.local && rm -f "$tmp"
+          echo "OK   inserted before 'exit 0' in /etc/rc.local"
+        else
+          echo "$line" | sudo tee -a /etc/rc.local >/dev/null
+          echo "OK   appended to /etc/rc.local"
+        fi
+        echo "     takes effect on the next boot"
