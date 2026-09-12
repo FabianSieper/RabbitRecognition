@@ -19,11 +19,12 @@ is recognized** notifies **all subscribed Telegram users**:
 Schedule (5 min) → HTTP GET http://192.168.178.106:8011/recognize
   → IF $json.rabbit == true
       true:  base64 `image` → binary → one item per user with images on
-            → Telegram sendPhoto (caption = timestamp text)
+            → Telegram sendPhoto (ohne Text)
       false: NoOp (nothing is sent)
 ```
 
-**Foto oder nichts:** An erkannte Hasen gibt es ausschließlich Fotos.
+**Foto oder nichts, ohne jeglichen Text:** An erkannte Hasen gibt es
+ausschließlich Fotos — das Bild wird ohne Caption/Text gesendet.
 Wird ein Benutzer nicht angesprochen (`/stop`) oder liegen gar
 keine Bild-Daten vor (`include_image = false`), wird nichts gesendet —
 nie eine reine Textnachricht.

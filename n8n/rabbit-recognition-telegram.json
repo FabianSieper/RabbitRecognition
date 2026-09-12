@@ -93,7 +93,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const state = $getWorkflowStaticData('global');\nconst users = state.users ?? {};\n\n// Eintreffendes Item (mit dem binären Bild, falls vorhanden).\n// Der Convert-to-File-Node schreibt ins Property data - generisch lesen.\nconst item = $input.first();\nconst binary = item.binary ?? {};\nconst image = Object.values(binary)[0];\n\n// Ohne Bild-Daten (z. B. include_image = false) wird gar nichts\n// gesendet - nie eine reine Textnachricht.\nif (!image) return [];\n\nconst time = new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC';\nconst text = `🐰 Hase entdeckt – ${time}`;\n\n// Ausgabe: ein Item pro Benutzer mit aktiven Bildern.\n// Benutzer mit ausgeschalteten Bildern werden nicht kontaktiert.\nconst recipients = Object.entries(users)\n  .filter(([, user]) => user.images === true)\n  .map(([key]) => ({\n    chatId: key.replace(/^user-/, ''),\n    text,\n    binary: { image },\n  }));\n\nreturn recipients;"
+        "jsCode": "const state = $getWorkflowStaticData('global');\nconst users = state.users ?? {};\n\n// Eintreffendes Item (mit dem binären Bild, falls vorhanden).\n// Der Convert-to-File-Node schreibt ins Property data - generisch lesen.\nconst item = $input.first();\nconst binary = item.binary ?? {};\nconst image = Object.values(binary)[0];\n\n// Diagnose: erscheint in den Execution-Logs (n8n UI: Execution, Node, View Logs).\nconst active = Object.values(users).filter((u) => u.images === true);\nconsole.log('Empfänger auflösen: ' + Object.keys(users).length + ' Benutzer registriert, ' + active.length + ' mit Bildern an, Bild vorhanden: ' + Boolean(image));\n\n// Ohne Bild-Daten (z. B. include_image = false) wird gar nichts\n// gesendet - nie eine Textnachricht.\nif (!image) return [];\n\nconst time = new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC';\nconst text = `🐰 Hase entdeckt – ${time}`;\n\n// Ausgabe: ein Item pro Benutzer mit aktiven Bildern.\n// n8n-Item-Format: { json: {...}, binary: {...} }.\n// Ohne json-Wrapper löst der Telegram-Node $json.chatId nicht auf.\nconst recipients = Object.entries(users)\n  .filter(([, user]) => user.images === true)\n  .map(([key]) => ({\n    json: {\n      chatId: key.replace(/^user-/, ''),\n      text,\n    },\n    binary: { image },\n  }));\n\nreturn recipients;"
       },
       "id": "b7e1f2a3-0005-4c5d-9e6f-2a3b4c5d6e7f",
       "name": "Empfänger auflösen",
@@ -109,10 +109,7 @@
         "operation": "sendPhoto",
         "chatId": "={{ $json.chatId }}",
         "binaryData": true,
-        "binaryPropertyName": "image",
-        "additionalFields": {
-          "caption": "={{ $json.text }}"
-        }
+        "binaryPropertyName": "image"
       },
       "id": "b7e1f2a3-0006-4c5d-9e6f-2a3b4c5d6e7f",
       "name": "Bild an Telegram senden",
