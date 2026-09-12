@@ -1,0 +1,292 @@
+{
+  "name": "Rabbit Recognition (Telegram)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      },
+      "id": "b7e1f2a3-0001-4c5d-9e6f-2a3b4c5d6e7f",
+      "name": "Alle 5 Minuten",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -560,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "http://192.168.178.106:8011/recognize",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "b7e1f2a3-0002-4c5d-9e6f-2a3b4c5d6e7f",
+      "name": "RabbitRecognition anfragen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -340,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "cond-rabbit-true",
+              "leftValue": "={{ $json.rabbit }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "name": "filter.operator",
+                "singleValue": true,
+                "values": []
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b7e1f2a3-0003-4c5d-9e6f-2a3b4c5d6e7f",
+      "name": "Hase erkannt?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -120,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "toBinary",
+        "sourceProperty": "image",
+        "options": {}
+      },
+      "id": "b7e1f2a3-0004-4c5d-9e6f-2a3b4c5d6e7f",
+      "name": "Bild aus Base64",
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        100,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const state = $getWorkflowStaticData('global');\n\n// Wenn /stop gesetzt wurde, hier beenden.\n// Standardmäßig ist der Versand aktiv.\nif (state.telegramPaused === true) {\n  return [];\n}\n\nconst item = $input.first();\nconst binary = item.binary ?? {};\nconst image = binary.image ?? binary.data ?? Object.values(binary)[0];\n\nif (!image) {\n  throw new Error('Kein Bild vorhanden');\n}\n\nreturn [\n  {\n    binary: {\n      image\n    }\n  }\n];"
+      },
+      "id": "b7e1f2a3-0005-4c5d-9e6f-2a3b4c5d6e7f",
+      "name": "Pause prüfen + Bild vorbereiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "sendPhoto",
+        "chatId": "632078830",
+        "binaryData": true,
+        "binaryPropertyName": "image",
+        "additionalFields": {}
+      },
+      "id": "b7e1f2a3-0006-4c5d-9e6f-2a3b4c5d6e7f",
+      "name": "Bild an Telegram senden",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        540,
+        -80
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "hrff9SdHTUZYVcup",
+          "name": "Hasi"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "b7e1f2a3-0007-4c5d-9e6f-2a3b4c5d6e7f",
+      "name": "Kein Hase",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        100,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {
+          "chatIds": "632078830",
+          "userIds": "632078830"
+        }
+      },
+      "id": "b7e1f2a3-0008-4c5d-9e6f-2a3b4c5d6e7f",
+      "name": "Telegram Kommandos",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -560,
+        320
+      ],
+      "webhookId": "5c6d7e8f-0a1b-4c2d-9e3f-4a5b6c7d8e9f",
+      "credentials": {
+        "telegramApi": {
+          "id": "hrff9SdHTUZYVcup",
+          "name": "Hasi"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst message = input.message ?? {};\n\nconst chatId = String(message.chat?.id ?? '');\nconst userId = String(message.from?.id ?? '');\n\n// Sicherheit: Nur dein eigener Telegram-Account darf steuern.\nif (chatId !== '632078830' || userId !== '632078830') {\n  return [];\n}\n\nconst text = String(message.text ?? '').trim();\nconst firstToken = text.split(/\\s+/)[0] ?? '';\nconst command = firstToken.toLowerCase().split('@')[0];\n\nconst state = $getWorkflowStaticData('global');\n\n// Default: Benachrichtigungen sind aktiv\nconst isPaused = state.telegramPaused === true;\n\nif (command === '/stop') {\n  state.telegramPaused = true;\n\n  return [\n    {\n      json: {\n        chatId,\n        text: '⏸ Bildbenachrichtigungen sind pausiert. Mit /start wieder aktivieren.'\n      }\n    }\n  ];\n}\n\nif (command === '/start') {\n  state.telegramPaused = false;\n\n  return [\n    {\n      json: {\n        chatId,\n        text: '▶️ Bildbenachrichtigungen sind aktiviert.'\n      }\n    }\n  ];\n}\n\nif (command === '/status') {\n  return [\n    {\n      json: {\n        chatId,\n        text: isPaused\n          ? '⏸ Status: Bildbenachrichtigungen sind pausiert.'\n          : '▶️ Status: Bildbenachrichtigungen sind aktiviert.'\n      }\n    }\n  ];\n}\n\nreturn [];"
+      },
+      "id": "b7e1f2a3-0009-4c5d-9e6f-2a3b4c5d6e7f",
+      "name": "Start Stop verarbeiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -340,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "b7e1f2a3-000a-4c5d-9e6f-2a3b4c5d6e7f",
+      "name": "Kommando bestätigen",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -120,
+        320
+      ],
+      "webhookId": "6d7e8f9a-1b2c-4d3e-8f4a-5b6c7d8e9f0a",
+      "credentials": {
+        "telegramApi": {
+          "id": "hrff9SdHTUZYVcup",
+          "name": "Hasi"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Alle 5 Minuten": {
+      "main": [
+        [
+          {
+            "node": "RabbitRecognition anfragen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RabbitRecognition anfragen": {
+      "main": [
+        [
+          {
+            "node": "Hase erkannt?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hase erkannt?": {
+      "main": [
+        [
+          {
+            "node": "Bild aus Base64",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Kein Hase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bild aus Base64": {
+      "main": [
+        [
+          {
+            "node": "Pause prüfen + Bild vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pause prüfen + Bild vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "Bild an Telegram senden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Kommandos": {
+      "main": [
+        [
+          {
+            "node": "Start Stop verarbeiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Start Stop verarbeiten": {
+      "main": [
+        [
+          {
+            "node": "Kommando bestätigen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {}
+}

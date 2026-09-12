@@ -167,29 +167,55 @@ RabbitRecognition/
 ├── models/                     # mobilenet_v2_rabbit.onnx (+ .onnx.data) + manifest.json
 ├── train/                      # retraining + ONNX export scripts
 ├── n8n/
-│   └── rabbit-recognition-flow.json  # importable n8n workflow
+│   ├── README.md                       # import/setup/migration docs
+│   ├── rabbit-recognition-flow.json    # importable n8n workflow (frame persistence)
+│   └── rabbit-recognition-telegram.json  # importable n8n workflow (Telegram + commands)
 └── deploy/
     └── rabbit-recognition.service    # systemd unit
 ```
 
-## 7. n8n workflow
+## 7. n8n workflows
 
-File: `n8n/rabbit-recognition-flow.json` (import via n8n UI:
-*Workflows → Import from File*). Fixed UUIDs, importable as-is.
+Two importable files (n8n UI: *Workflows → Import from File*; fixed
+UUIDs, importable as-is; see [`n8n/README.md`](n8n/README.md) for setup
+and migration steps):
 
-Flow (trigger → call → evaluate → persist frame):
+### `rabbit-recognition-telegram.json` (recommended)
 
-1. **Schedule trigger** — every 5 minutes (⏱ user-adjustable).
+Replaces the old Hasen-Stream n8n flows (webhook "image-upload" and the
+Telegram command flow). Two branches:
+
+1. **Scheduled recognition** (top):
+   1. **Schedule trigger** — every 5 minutes (user-adjustable).
+   2. **HTTP Request** — `GET http://192.168.178.106:8011/recognize`
+      (options: never fail; on failure the workflow just stops).
+   3. **IF** — `body.rabbit == true`.
+   4. **true branch**: base64 `body.image` → binary → pause check
+      (workflow static data `telegramPaused`) → **Telegram sendPhoto**
+      (image only, no caption).
+   5. **false branch**: NoOp (nothing is sent).
+2. **Telegram commands** (bottom):
+   1. **Telegram Trigger** (message updates, chat/user filtered).
+   2. **Code** — author check (only chat/user `632078830` may control),
+      `/stop` (pause), `/start` (resume), `/status`; state in workflow
+      static data.
+   3. **Telegram sendText** — confirmation.
+
+Note: activating this workflow takes over the bot's Telegram webhook,
+so the old flows must be deactivated/deleted first.
+
+### `rabbit-recognition-flow.json` (frame persistence)
+
+1. **Schedule trigger** — every 5 minutes.
 2. **HTTP Request** — `GET http://192.168.178.106:8011/recognize`
-   (options: never fail; on failure the workflow just stops).
+   (never fail).
 3. **IF** — `body.rabbit == true`.
 4. **true branch**: Move Binary Data (base64 `body.image` → binary) →
    Read/Write Files (store `/home/fabi/rabbits/frames/rabbit_<timestamp>.jpg`;
    path writable by the n8n container user — adjust/bind-mount as needed).
 5. **false branch**: NoOp.
 
-Planned extensions (⬜ backlog):
-- Push notification when a rabbit appears (Telegram/Email node).
+Remaining backlog (⬜):
 - Save a small thumbnail even on "no rabbit" for auditability.
 - Switch trigger from schedule to a webhook (e.g. manual/external trigger).
 
@@ -246,7 +272,7 @@ Planned extensions (⬜ backlog):
 | 8 | Mock stream for local testing | ✅ |
 | 9 | Unit tests (28, green) | ✅ |
 | 10 | Local E2E with mock + real model | ✅ |
-| 11 | n8n workflow JSON (importable) | ✅ |
+| 11 | n8n workflow JSONs (2 importable, fixed UUIDs: telegram + persistence) | ✅ |
 | 12 | systemd unit | ✅ |
 | 13 | `config.toml` shipped + `.env.template` | ✅ |
 | 14 | README (setup, API, n8n, deployment) | ✅ |
@@ -256,7 +282,8 @@ Planned extensions (⬜ backlog):
 | 18 | Live verification against camera stream on Pi | ⬜ |
 | 19 | Hasen-Stream cleanup branch (remove recognition/watcher) | ✅ (`feature/separate-rabbit-recognition-functionality` @ `da57fd0`) |
 | 20 | Taskfile for Pi install (optional convenience) | ⬜ |
-| 21 | n8n notification/audit extensions (backlog, §7) | ⬜ |
+| 21 | n8n notification flow (Telegram photo + /stop /start /status) | ✅ |
+| 22 | n8n audit extensions (thumbnail on "no rabbit", §7 backlog) | ⬜ |
 
 ## 12. Open questions / risks
 

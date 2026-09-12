@@ -155,21 +155,24 @@ Recommendation: use the LAN IP (no repo change); if you want IP-change
 resilience, add the `extra_hosts` line to the n8n compose and use
 `host.docker.internal`.
 
-### Importing the workflow
+### Importing a workflow
 
-`n8n/rabbit-recognition-flow.json` is importable via n8n UI
-(Workflows → ⋯ → Import from File). It implements:
+Both files in [`n8n/`](n8n/README.md) are importable via n8n UI
+(Workflows → Import from File); see the [n8n README](n8n/README.md) for
+setup steps and adjustment points:
 
-1. **Schedule Trigger** every 5 min (change to a Webhook trigger on demand).
-2. **HTTP Request** → `http://192.168.178.106:8011/recognize`.
-3. **IF** `$json.rabbit == true`
-   - true: **Move Base64 to Binary** (`image` property) → **Write File**
-     to `/home/fabi/rabbits/frames/rabbit_<timestamp>.jpg`
-     (path writable by the n8n container user `node`; adjust as needed —
-     e.g. bind-mount a directory in your n8n compose).
-   - false: **NoOp**.
+- **`rabbit-recognition-telegram.json`** (recommended): every 5 min →
+  `GET http://192.168.178.106:8011/recognize` → **only if `rabbit ==
+  true`**: send the frame to Telegram (image only, no caption); plus a
+  Telegram command branch (`/stop`, `/start`, `/status`) to pause
+  notifications. Replaces the old Hasen-Stream flows; Telegram
+  chat/credential are pre-filled for the current instance.
+- **`rabbit-recognition-flow.json`**: same trigger/call/gate, true
+  branch saves the frame to
+  `/home/fabi/rabbits/frames/rabbit_<timestamp>.jpg` (path must be
+  writable by the n8n container user, e.g. via bind-mount).
 
-Note: the flow is *inactive* by default — activate it after import.
+Both flows are *inactive* by default — activate after import.
 
 ## Deploying on the Pi (systemd)
 
