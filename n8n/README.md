@@ -5,6 +5,28 @@ Two importable workflows. Both are ready for the current n8n instance
 chat + credential ("Hasi"). Import via n8n UI: **Workflows → Import
 from File**.
 
+## ⚠️ Important: the service is addressed by a hardcoded IP
+
+Both workflows call RabbitRecognition by a **hardcoded IP**
+(`http://192.168.178.106:8011`). If that host gets its address from
+**DHCP**, the IP can change at any time (e.g. `.106` → `.108`) and every
+scheduled run then fails with *"The host is unreachable, perhaps the
+server is offline"* — even though the service itself is running fine.
+This is exactly what happened on 2026-09-12, when the Pi's DHCP lease
+moved from `.106` to `.108` and the whole workflow went dark.
+
+- **Recommended fix:** reserve the service host's IP in the router so it
+  never changes — e.g. Fritz!Box *Heimnetz → Netze → DHCP-Server →
+  Reservierungen* (add the host by MAC, pin a fixed IP). Then set that
+  same IP in the HTTP node(s).
+- **Don't use the bare hostname** (e.g. `pi4`) instead: on this network
+  `pi4` resolves to `127.0.1.1` (localhost) and `pi4.local` is claimed by a
+  different/stale device (the Pi registers itself as `pi4-2.local`), so a
+  hostname is unreliable and can point at the wrong machine.
+- **Symptom vs. cause:** "host is unreachable" from n8n while the service
+  answers on its own IP = the workflow's IP no longer matches the host.
+  Check the host's current IP first; don't restart the service.
+
 ## `rabbit-recognition-telegram.json` — notification + control (recommended)
 
 Replaces the old Hasen-Stream flows (webhook "image-upload" and the
