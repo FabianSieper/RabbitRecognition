@@ -24,19 +24,18 @@ Schedule (5 min) → HTTP GET http://192.168.178.106:8011/recognize
 ```
 
 **Foto oder nichts, ohne jeglichen Text:** An erkannte Hasen gibt es
-ausschließlich Fotos — das Bild wird ohne Caption/Text gesendet.
-Wird ein Benutzer nicht angesprochen (`/stop`) oder liegen gar
-keine Bild-Daten vor (`include_image = false`), wird nichts gesendet —
-nie eine reine Textnachricht.
+ausschließlich Fotos — das Bild wird ohne Caption/Text und ohne n8n
+Attribution gesendet. Wird ein Benutzer nicht angesprochen (`/stop`)
+oder liegen gar keine Bild-Daten vor (`include_image = false`), wird
+nichts gesendet — nie eine reine Textnachricht.
 
 Each user's subscription is stored in the n8n Data Table
 `rabbit_subscriptions`, one row per Telegram chat:
 
-| Column       | Type      | Meaning                                      |
-|--------------|-----------|----------------------------------------------|
-| `chatId`     | String    | Telegram chat id of the subscriber           |
-| `images`     | Boolean   | `true` = receive rabbit photos               |
-| `updatedAt`  | DateTime  | Timestamp of the last `/start`/`/stop`       |
+| Column   | Type    | Meaning                                |
+|----------|---------|----------------------------------------|
+| `chatId` | String  | Telegram chat id of the subscriber     |
+| `images` | Boolean | `true` = receive rabbit photos         |
 
 `/start` and `/stop` upsert the row; `/status` reads it. The photo
 branch sends to all rows with `images = true`. Until a row exists,
@@ -45,20 +44,34 @@ nothing is sent.
 ### Branch 2: Telegram commands (per user)
 
 ```
-Telegram Trigger (messages, any user) → command code → Telegram sendText (confirmation)
+Telegram Trigger (messages)
+  → Zugriff prüfen
+  → Kommandos verarbeiten
+  → Befehle routen
+  → Telegram sendText (confirmation)
 ```
 
 - `/start` — receive photos when a rabbit is detected
 - `/stop` — receive nothing (photos off)
 - `/status` — show the current setting
-- `/chatId` — show your own chat id (works for every user,
-  regardless of the `ALLOWED` list); copy the id into `ALLOWED`
-  to whitelist the chat
+- `/chatId` — show your own chat id; this command works even before
+  the chat id is whitelisted
 - `/hilfe` — command overview
 
-Every user manages only their own subscription. An optional allow
-list (`ALLOWED` in the command code node, empty = everyone) can
-restrict which Telegram ids may use the bot.
+Access is controlled by a dedicated code node named **`Zugriff
+prüfen`**. The allowed Telegram chat ids are maintained in:
+
+```js
+const allowedChatIds = ['632078830'];
+```
+
+An empty list means "everyone is allowed". A non-empty list only lets
+the listed chat ids use `/start`, `/stop`, `/status`, and `/hilfe`.
+`/chatId` remains available so unknown users can obtain their own id
+for whitelisting.
+
+All Telegram text responses have n8n attribution disabled
+(`appendAttribution = false`).
 
 ### Setup (4 steps, in this order)
 
@@ -68,17 +81,16 @@ restrict which Telegram ids may use the bot.
    deleted before activating the new one.
 2. **Create the Data Table**: in the n8n left navigation open
    **Data Tables** and create a table named exactly
-   `rabbit_subscriptions`. Add these three columns manually:
+   `rabbit_subscriptions`. Add these two columns manually:
    - `chatId` — String
    - `images` — Boolean
-   - `updatedAt` — DateTime
 
-   If `rabbit_subscriptions` already exists but is empty, open it and
-   add the same three columns. The workflow resolves the table by
+   If `rabbit_subscriptions` already exists, open it and make sure it
+   has at least those two columns. The workflow resolves the table by
    name, but it does **not** create missing columns automatically.
 3. **Import**: Workflows → Import from File →
    `rabbit-recognition-telegram.json`. On any instance other than the
-   current one, open both Telegram nodes and re-select your Telegram
+   current one, open the Telegram nodes and re-select your Telegram
    credential.
 4. **Activate** the workflow (toggle in the workflow list). Done.
 
@@ -87,8 +99,8 @@ restrict which Telegram ids may use the bot.
 - **Schedule**: interval in the first node (default 5 min).
 - **Recipients**: rows in the `rabbit_subscriptions` Data Table;
   users switch their own row by messaging the bot (commands above).
-- **Authorized controllers**: `ALLOWED` list in the "Kommandos
-  verarbeiten" code node (empty = everyone).
+- **Authorized chat ids**: `allowedChatIds` list in the "Zugriff
+  prüfen" code node (empty = everyone).
 - **Threshold**: append `?threshold=0.7` to the HTTP node URL.
 - **Pause (without Telegram)**: deactivate the workflow.
 
@@ -102,8 +114,11 @@ restrict which Telegram ids may use the bot.
 - The Telegram Trigger registers the bot's webhook when activated —
   hence step 1 (old flows off) is required.
 - If a Data Table node fails, open the execution and check whether
-  `rabbit_subscriptions` exists with `chatId`, `images`, and
-  `updatedAt` with the correct types.
+  `rabbit_subscriptions` exists with `chatId` (String) and `images`
+  (Boolean).
+- Confirmation messages for `/start` and `/stop` are generated
+  explicitly in the "Abonnement bestätigen" node, so they no longer
+  depend on a missing `text` field from the command code node.
 
 ## `rabbit-recognition-flow.json` — frame persistence
 
@@ -116,11 +131,14 @@ sending it to Telegram. Use both, one, or neither.
 
 - [ ] Old Hasen-Stream flows deactivated/deleted in n8n
 - [ ] Data Table `rabbit_subscriptions` exists with `chatId`
-      (String), `images` (Boolean), and `updatedAt` (DateTime)
+      (String) and `images` (Boolean)
 - [ ] New workflow imported + activated (replaces the single-user
       version: after import, delete the old workflow so only one
       workflow holds the bot's webhook)
-- [ ] `/status`, `/start`, `/stop` work per user
+- [ ] `allowedChatIds` in "Zugriff prüfen" contains the chat ids that
+      may control their subscription
+- [ ] `/status`, `/start`, `/stop` work per user without n8n
+      attribution text
 - [ ] Second Telegram account can toggle independently; `/status`
       reflects each user's own setting
 - [ ] A recognized rabbit delivers a photo (users with `/start`);
