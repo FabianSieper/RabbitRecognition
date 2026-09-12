@@ -6,8 +6,8 @@ import cv2
 import numpy as np
 import onnxruntime as ort
 
-MODELS_DIR = Path(__file__).resolve().parent.parent / "models"
-DEFAULT_MODEL = MODELS_DIR / "mobilenet_v2_rabbit.onnx"
+from .config import DEFAULT_MODEL, MODELS_DIR
+
 MANIFEST = MODELS_DIR / "manifest.json"
 
 

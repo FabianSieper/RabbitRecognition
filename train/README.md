@@ -7,14 +7,14 @@ Retrains the deployment model from labeled images and exports it as ONNX.
 Install in a dedicated venv (e.g. the local `.venv` used during research):
 
 ```bash
-python3 -m venv venv-recognition
-venv-recognition/bin/pip install -r train/requirements.txt
+python3 -m venv venv-train
+venv-train/bin/pip install -r train/requirements.txt
 ```
 
 ## Run
 
 ```bash
-venv-recognition/bin/python train/train_final.py --data /path/to/TestData
+venv-train/bin/python train/train_final.py --data /path/to/TestData
 ```
 
 Expected data layout (JPEG images only):
@@ -44,6 +44,5 @@ change is required after retraining.
   [1,3,224,224] (CHW, 0-1, ImageNet normalized), output
   `rabbit_probability` [1]
 
-On Raspberry Pi 3 (Cortex-A53, no dot-product instructions) FP32 ONNX
-through ONNX Runtime is the robust choice; INT8 quantization gives limited
-gain on that hardware and is not the default.
+On Raspberry Pi hardware FP32 ONNX through ONNX Runtime is the robust
+choice; INT8 quantization gives limited gain there and is not the default.

@@ -17,7 +17,6 @@ from fastapi.responses import Response
 from . import __version__
 from .classifier import RabbitClassifier
 from .config import Settings, load_settings
-from .frame_fetcher import FETCHERS  # noqa: F401  (available for reuse)
 from .service import RabbitRecognitionService
 
 log = logging.getLogger("rabbit-recognition")

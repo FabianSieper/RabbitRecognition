@@ -100,19 +100,6 @@ def fetch_jpeg_via_save(base_url, timeout=30.0):
     return resp.content
 
 
-def fetch_frame_from_mjpeg(base_url, timeout=20.0):
-    return decode_jpeg(fetch_jpeg_from_mjpeg(base_url, timeout=timeout))
-
-
-def fetch_frame_via_save(base_url, timeout=30.0):
-    return decode_jpeg(fetch_jpeg_via_save(base_url, timeout=timeout))
-
-
-FETCHERS = {
-    "mjpeg": fetch_frame_from_mjpeg,
-    "save": fetch_frame_via_save,
-}
-
 JPEG_FETCHERS = {
     "mjpeg": fetch_jpeg_from_mjpeg,
     "save": fetch_jpeg_via_save,

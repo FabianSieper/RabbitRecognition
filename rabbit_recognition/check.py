@@ -7,14 +7,13 @@ import logging
 import sys
 
 from .classifier import RabbitClassifier
-from .config import load_settings
-from .frame_fetcher import FETCHERS
+from .config import VALID_FETCH_METHODS, load_settings
 from .service import RabbitRecognitionService
 
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description="Fetch one frame from the stream and classify it for rabbits.")
-    parser.add_argument("--method", choices=sorted(FETCHERS), default=None,
+    parser.add_argument("--method", choices=VALID_FETCH_METHODS, default=None,
                         help="Frame source endpoint (default: configured fetch method)")
     parser.add_argument("--threshold", type=float, default=None)
     parser.add_argument("--json", action="store_true", help="Print the full result as JSON")
