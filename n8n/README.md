@@ -24,7 +24,7 @@ Schedule (5 min) → HTTP GET http://192.168.178.106:8011/recognize
 ```
 
 **Foto oder nichts:** An erkannte Hasen gibt es ausschließlich Fotos.
-Wird ein Benutzer nicht angesprochen (`/kein-bild`) oder liegen gar
+Wird ein Benutzer nicht angesprochen (`/stop`) oder liegen gar
 keine Bild-Daten vor (`include_image = false`), wird nichts gesendet —
 nie eine reine Textnachricht.
 
@@ -40,10 +40,8 @@ bot, nothing is sent.
 Telegram Trigger (messages, any user) → command code → Telegram sendText (confirmation)
 ```
 
-- `/bild` — receive photos when a rabbit is detected
-- `/kein-bild` — receive nothing (photos off)
-- `/start` — alias for `/bild`
-- `/stop` — alias for `/kein-bild`
+- `/start` — receive photos when a rabbit is detected
+- `/stop` — receive nothing (photos off)
 - `/status` — show the current setting
 - `/hilfe` — command overview
 
@@ -96,8 +94,8 @@ sending it to Telegram. Use both, one, or neither.
 - [ ] New workflow imported + activated (replaces the single-user
       version: after import, delete the old workflow so only one
       workflow holds the bot's webhook)
-- [ ] `/status`, `/bild`, `/kein-bild` work per user
+- [ ] `/status`, `/start`, `/stop` work per user
 - [ ] Second Telegram account can toggle independently; `/status`
       reflects each user's own setting
-- [ ] A recognized rabbit delivers a photo (users with `/bild`);
-      users with `/kein-bild` receive nothing — never text
+- [ ] A recognized rabbit delivers a photo (users with `/start`);
+      users with `/stop` receive nothing — never text
