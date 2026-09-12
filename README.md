@@ -201,8 +201,26 @@ curl http://127.0.0.1:8011/health
 exists:
 
 ```
-su - fabi -c 'cd /home/fabi/RabbitRecognition && task run'
+su - fabi -c 'cd /home/fabi/RabbitRecognition && nohup task run >> run.log 2>&1 &'
 ```
+
+Two details matter here:
+- `&` is required — rc.local executes lines sequentially, so the
+  service must be backgrounded or the next line would never start.
+- `nohup` keeps the service alive when the `su -` login shell exits
+  (without it, uvicorn would receive SIGHUP and shut down).
+- `task run` itself stays a plain foreground command, so it remains
+  handy for manual testing (Ctrl-C stops it).
+
+The backgrounded service's log lives next to the repo:
+
+```bash
+tail -f run.log
+```
+
+Note: rc.local does not restart the service after a crash — in that
+case start it manually with `task run` (it stays in the foreground
+until Ctrl-C).
 
 Prerequisites on the Pi: `task` (go-task) and Python 3.11.
 

@@ -229,8 +229,10 @@ Primary (matches the existing pi4 setup): boot autostart via
   - `rc-local-check` — read-only check for the rc.local entry
   - `rc-local-add` — idempotent registration (sudo; inserts before
     `exit 0` if present, appends otherwise, no-op when already present)
-- Line written:
-  `su - fabi -c 'cd /home/fabi/RabbitRecognition && task run'`
+- Line written (`&` because rc.local runs lines sequentially; `nohup`
+  survives the `su -` login shell exit — uvicorn treats SIGHUP as
+  shutdown; log goes to `run.log`; no auto-restart after crash):
+  `su - fabi -c 'cd /home/fabi/RabbitRecognition && nohup task run >> run.log 2>&1 &'`
 - Pi prerequisites: go-task + Python 3.11.
 
 The service binds `0.0.0.0:8011` so n8n (same host, other network

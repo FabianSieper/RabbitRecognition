@@ -11,6 +11,7 @@ venv/
 saved_images/
 *.jpg
 *.jpeg
+run.log
 
 # OS / IDE
 .DS_Store

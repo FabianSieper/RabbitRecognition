@@ -20,7 +20,7 @@ tasks:
     desc: Check whether RabbitRecognition is registered in /etc/rc.local (read-only)
     cmds:
       - |
-        if grep -qF "su - fabi -c 'cd /home/fabi/RabbitRecognition && task run'" /etc/rc.local 2>/dev/null; then
+        if grep -qF "su - fabi -c 'cd /home/fabi/RabbitRecognition && nohup task run >> run.log 2>&1 &'" /etc/rc.local 2>/dev/null; then
           echo "OK   /etc/rc.local: RabbitRecognition is registered"
         else
           echo "MISS /etc/rc.local: RabbitRecognition is not registered (task rc-local-add)"
@@ -30,7 +30,10 @@ tasks:
     desc: Register RabbitRecognition in /etc/rc.local (idempotent, needs sudo)
     cmds:
       - |
-        line="su - fabi -c 'cd /home/fabi/RabbitRecognition && task run'"
+        # rc.local runs lines sequentially, so the service is backgrounded
+        # ('&'); nohup keeps it alive when the su login shell exits
+        # (uvicorn treats SIGHUP as shutdown) and run.log is its log file
+        line="su - fabi -c 'cd /home/fabi/RabbitRecognition && nohup task run >> run.log 2>&1 &'"
         if grep -qF "$line" /etc/rc.local 2>/dev/null; then
           echo "OK   already registered - nothing to do"
         elif grep -qE '^exit 0' /etc/rc.local 2>/dev/null; then
