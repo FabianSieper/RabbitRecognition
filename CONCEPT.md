@@ -249,12 +249,12 @@ Planned extensions (⬜ backlog):
 | 11 | n8n workflow JSON (importable) | ✅ |
 | 12 | systemd unit | ✅ |
 | 13 | `config.toml` shipped + `.env.template` | ✅ |
-| 14 | README (setup, API, n8n, deployment) | 🔧 (config section being updated) |
-| 15 | Push repo to GitHub | ⬜ |
+| 14 | README (setup, API, n8n, deployment) | ✅ |
+| 15 | Push repo to GitHub | ✅ (commit `76a8f2d`, branch `main`) |
 | 16 | Deploy to Pi (clone, venv, .env, enable service) | ⬜ |
 | 17 | Import n8n workflow + adjust schedule/URL (user action) | 👤 |
 | 18 | Live verification against camera stream on Pi | ⬜ |
-| 19 | Hasen-Stream cleanup branch (remove recognition/watcher) | ⬜ |
+| 19 | Hasen-Stream cleanup branch (remove recognition/watcher) | ✅ (`feature/separate-rabbit-recognition-functionality` @ `da57fd0`) |
 | 20 | Taskfile for Pi install (optional convenience) | ⬜ |
 | 21 | n8n notification/audit extensions (backlog, §7) | ⬜ |
 
