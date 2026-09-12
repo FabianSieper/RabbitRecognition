@@ -26,7 +26,7 @@ there again.
 n8n (Docker, 192.168.178.106:5678, bridge network n8n-net)
   │  HTTP GET (schedule or webhook trigger)
   ▼
-RabbitRecognition (systemd, 192.168.178.106, 0.0.0.0:8011)
+RabbitRecognition (rc.local + Taskfile, 192.168.178.106, 0.0.0.0:8011)
   │  MJPEG GET /mjpeg (same LAN)
   ▼
 Hasen-Stream backend (192.168.178.135, 0.0.0.0:8000)
@@ -93,7 +93,7 @@ Error handling:
 
 Precedence (highest wins):
 
-1. **Environment variables** (e.g. systemd `EnvironmentFile=.env`)
+1. **Environment variables** (e.g. `.env` on the Pi)
 2. **Config file** — `config.toml` at the repo root by default, override
    with `RABBIT_CONFIG` (`.toml` or `.json`)
 3. **Built-in defaults**
@@ -167,12 +167,10 @@ RabbitRecognition/
 │   └── test_api.py             # endpoint contract with injected fakes
 ├── models/                     # mobilenet_v2_rabbit.onnx (+ .onnx.data) + manifest.json
 ├── train/                      # retraining + ONNX export scripts
-├── n8n/
-│   ├── README.md                       # import/setup/migration docs
-│   ├── rabbit-recognition-flow.json    # importable n8n workflow (frame persistence)
-│   └── rabbit-recognition-telegram.json  # importable n8n workflow (Telegram + commands)
-└── deploy/
-    └── rabbit-recognition.service    # systemd unit
+└── n8n/
+    ├── README.md                       # import/setup/migration docs
+    ├── rabbit-recognition-flow.json    # importable n8n workflow (frame persistence)
+    └── rabbit-recognition-telegram.json  # importable n8n workflow (Telegram + commands)
 ```
 
 ## 7. n8n workflows
@@ -235,11 +233,6 @@ Primary (matches the existing pi4 setup): boot autostart via
   `su - fabi -c 'cd /home/fabi/RabbitRecognition && task run'`
 - Pi prerequisites: go-task + Python 3.11.
 
-Alternative: systemd unit `deploy/rabbit-recognition.service`
-(`User=fabi`, `WorkingDirectory=/home/fabi/RabbitRecognition`,
-`EnvironmentFile=.env`, `ExecStart=.../venv/bin/python -m rabbit_recognition.api`,
-`Restart=on-failure`, `RestartSec=30`).
-
 The service binds `0.0.0.0:8011` so n8n (same host, other network
 namespace) can reach it.
 
@@ -284,7 +277,7 @@ namespace) can reach it.
 | 9 | Unit tests (28, green) | ✅ |
 | 10 | Local E2E with mock + real model | ✅ |
 | 11 | n8n workflow JSONs (2 importable, fixed UUIDs: telegram + persistence) | ✅ |
-| 12 | systemd unit | ✅ |
+| 12 | Boot autostart via `/etc/rc.local` (Taskfile) | ✅ |
 | 13 | `config.toml` shipped + `.env.template` | ✅ |
 | 14 | README (setup, API, n8n, deployment) | ✅ |
 | 15 | Push repo to GitHub | ✅ (commit `76a8f2d`, branch `main`) |

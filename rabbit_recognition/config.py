@@ -3,7 +3,7 @@
 The service reads a TOML (or JSON) config file — by default ``config.toml``
 next to the repository root, override with the ``RABBIT_CONFIG`` environment
 variable. Environment variables always win over the file, so the file is for
-stable settings and the environment (e.g. a systemd ``EnvironmentFile``) is
+stable settings and the environment (e.g. a ``.env`` file) is
 for one-off overrides.
 """
 from __future__ import annotations

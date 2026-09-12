@@ -1,6 +1,6 @@
 # RabbitRecognition configuration.
 #
-# Precedence: environment variables (e.g. .env / systemd EnvironmentFile)
+# Precedence: environment variables (e.g. a .env file)
 #             > this file > built-in defaults.
 # Every key is optional; omitted keys fall back to the values shown here.
 # Point RABBIT_CONFIG at another file to override this one.

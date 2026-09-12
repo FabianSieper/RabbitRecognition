@@ -25,6 +25,7 @@ Design and status of everything planned lives in
 ```
 .
 ├── CONCEPT.md               # central design & status document
+├── Taskfile.yml             # install / run / rc-local-check / rc-local-add
 ├── config.toml              # default configuration file (see below)
 ├── .env.template            # env-var overrides template
 ├── rabbit_recognition/      # Python package
@@ -35,8 +36,7 @@ Design and status of everything planned lives in
 │   ├── check.py             # one-shot CLI
 │   └── config.py            # config layer (defaults < config file < env)
 ├── mocks/                   # mock of the Hasen-Stream backend (for local testing)
-├── n8n/                     # importable n8n workflow (rabbit-recognition-flow.json)
-├── deploy/                  # systemd unit (rabbit-recognition.service)
+├── n8n/                     # importable n8n workflows (see n8n/README.md)
 ├── models/                  # mobilenet_v2_rabbit.onnx (+ .onnx.data) and manifest.json
 ├── train/                   # retraining scripts, checkpoint, dataset info
 └── tests/                   # unit + integration tests (unittest)
@@ -89,7 +89,7 @@ log_level = "INFO"
 include_image = true                  # base64 frame in /recognize payload
 ```
 
-Environment overrides (for `systemd` `EnvironmentFile=.env` etc.):
+Environment overrides (e.g. `.env` on the Pi):
 
 | Variable               | Config key            | Default                              |
 | ---------------------- | --------------------- | ------------------------------------ |
@@ -205,13 +205,6 @@ su - fabi -c 'cd /home/fabi/RabbitRecognition && task run'
 ```
 
 Prerequisites on the Pi: `task` (go-task) and Python 3.11.
-
-### Alternative: systemd
-
-`deploy/rabbit-recognition.service` stays available as an alternative
-(`sudo cp deploy/rabbit-recognition.service /etc/systemd/system/ &&
-sudo systemctl daemon-reload && sudo systemctl enable --now
-rabbit-recognition`).
 
 If port 8011 ever collides with an n8n exposed port, change `RABBIT_PORT`.
 
