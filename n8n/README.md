@@ -43,6 +43,8 @@ Telegram Trigger (messages, any user) → command code → Telegram sendText (co
 - `/start` — receive photos when a rabbit is detected
 - `/stop` — receive nothing (photos off)
 - `/status` — show the current setting
+- `/chat-id` — show your own chat id (works for every user,
+  regardless of the `ALLOWED` list)
 - `/hilfe` — command overview
 
 Every user manages only their own subscription. An optional allow
