@@ -6,8 +6,8 @@ backend (Raspberry Pi) and classifies it for rabbits using a fine-tuned
 Docker on the same Pi), e.g. on a schedule or via webhook.
 
 ```
- n8n (Docker, n8n Pi 192.168.178.106)
-   │  HTTP Request node: GET http://192.168.178.106:8011/recognize
+  n8n (Docker, n8n Pi `pi4`)
+   │  HTTP Request node: GET http://pi4:8011/recognize
    ▼
  RabbitRecognition (host process, same Pi, port 8011)
    │  frame fetch: GET http://192.168.178.135:8000/mjpeg
@@ -147,32 +147,36 @@ RabbitRecognition (host process bound to `0.0.0.0:8011`).
 
 | URL used in the HTTP Request node      | Works? | Notes                                                                 |
 | -------------------------------------- | ------ | --------------------------------------------------------------------- |
-| `http://192.168.178.106:8011/recognize` | ✅ recommended | n8n container → host via bridge NAT. No n8n repo change needed. Breaks only if the Pi's IP changes (use a fixed IP/DHCP reservation). |
+| `http://pi4:8011/recognize` | ✅ recommended | hostname survives DHCP IP changes; must resolve from the n8n container to the RabbitRecognition host |
 | `http://host.docker.internal:8011/recognize` | ⚠️ only with one line added | On Linux, `host.docker.internal` is **not** resolved by default (unlike Docker Desktop). Add to the `n8n` service in your n8n repo's `docker-compose.yml`: `extra_hosts: ["host.docker.internal:host-gateway"]`, then `docker compose up -d n8n`. Survives IP changes. |
 | `http://localhost:8011` / `127.0.0.1:8011` | ❌ no | These refer to the n8n container itself, not the host. |
 
-Recommendation: use the LAN IP (no repo change); if you want IP-change
-resilience, add the `extra_hosts` line to the n8n compose and use
-`host.docker.internal`.
+Recommendation: use the hostname `pi4` (no repo change); if it does not
+resolve correctly from the n8n container, fix DNS/mDNS or add the
+`extra_hosts` line to the n8n compose.
 
 ### Importing a workflow
 
-Both files in [`n8n/`](n8n/README.md) are importable via n8n UI
+All files in [`n8n/`](n8n/README.md) are importable via n8n UI
 (Workflows → Import from File); see the [n8n README](n8n/README.md) for
 setup steps and adjustment points:
 
 - **`rabbit-recognition-telegram.json`** (recommended): every 5 min →
-  `GET http://192.168.178.106:8011/recognize` → **only if `rabbit ==
+  `GET http://pi4:8011/recognize` → **only if `rabbit ==
   true`**: send the frame to Telegram (image only, no caption); plus a
-  Telegram command branch (`/stop`, `/start`, `/status`) to pause
-  notifications. Replaces the old Hasen-Stream flows; Telegram
-  chat/credential are pre-filled for the current instance.
+  Telegram command branch (`/stop`, `/start`, `/status`, `/chatid`,
+  `/hilfe`) to manage notifications. Replaces the old Hasen-Stream
+  flows; Telegram credential is pre-filled, allowed chat ids are
+  configured in `Zugriff prüfen`.
+- **`rabbit-recognition-discord.json`**: same, but delivers the photo
+  to Discord (fixed server channel file upload, image only) without any
+  command branch.
 - **`rabbit-recognition-flow.json`**: same trigger/call/gate, true
   branch saves the frame to
   `/home/fabi/rabbits/frames/rabbit_<timestamp>.jpg` (path must be
   writable by the n8n container user, e.g. via bind-mount).
 
-Both flows are *inactive* by default — activate after import.
+The flows are *inactive* by default — activate after import.
 
 ## Deploying on the Pi (rc.local, same style as the other projects there)
 

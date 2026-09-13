@@ -1,31 +1,29 @@
 # n8n workflows for RabbitRecognition
 
-Two importable workflows. Both are ready for the current n8n instance
-(192.168.178.106): fixed UUIDs, correct host IP, pre-filled Telegram
-chat + credential ("Hasi"). Import via n8n UI: **Workflows → Import
-from File**.
+Three importable workflows. All are ready for the current n8n instance
+(`pi4`) with fixed UUIDs and the service URL `http://pi4:8011`; the
+Telegram workflow additionally ships with the pre-filled Telegram
+credential ("Hasi"). Import via n8n UI: **Workflows → Import from
+File**.
 
-## ⚠️ Important: the service is addressed by a hardcoded IP
+## ⚠️ Important: the service is addressed by hostname `pi4`
 
-Both workflows call RabbitRecognition by a **hardcoded IP**
-(`http://192.168.178.106:8011`). If that host gets its address from
-**DHCP**, the IP can change at any time (e.g. `.106` → `.108`) and every
-scheduled run then fails with *"The host is unreachable, perhaps the
-server is offline"* — even though the service itself is running fine.
-This is exactly what happened on 2026-09-12, when the Pi's DHCP lease
-moved from `.106` to `.108` and the whole workflow went dark.
+All three workflows call RabbitRecognition via the resolvable hostname
+`http://pi4:8011`. This survives DHCP address changes because the
+workflow does not hardcode the Pi's current LAN IP. The hostname must
+resolve correctly from the n8n container to the RabbitRecognition host
+(router DNS, mDNS, Docker network alias, or `extra_hosts`).
 
-- **Recommended fix:** reserve the service host's IP in the router so it
-  never changes — e.g. Fritz!Box *Heimnetz → Netze → DHCP-Server →
-  Reservierungen* (add the host by MAC, pin a fixed IP). Then set that
-  same IP in the HTTP node(s).
-- **Don't use the bare hostname** (e.g. `pi4`) instead: on this network
-  `pi4` resolves to `127.0.1.1` (localhost) and `pi4.local` is claimed by a
-  different/stale device (the Pi registers itself as `pi4-2.local`), so a
-  hostname is unreliable and can point at the wrong machine.
-- **Symptom vs. cause:** "host is unreachable" from n8n while the service
-  answers on its own IP = the workflow's IP no longer matches the host.
-  Check the host's current IP first; don't restart the service.
+If `pi4` resolves to `127.0.1.1`, a stale `pi4.local`, or another
+machine, fix name resolution before importing/activating:
+
+- **Preferred:** make the router/mDNS answer for `pi4` point at the
+  RabbitRecognition host.
+- **Alternative:** add a Docker network alias or `extra_hosts` entry in
+  the n8n compose so the container resolves `pi4` to the host IP.
+- **Symptom vs. cause:** `ENOTFOUND` or "host unreachable" from n8n
+  while the service answers on the host = wrong or missing name
+  resolution for `pi4` in the container.
 
 ## `rabbit-recognition-telegram.json` — notification + control (recommended)
 
@@ -38,7 +36,7 @@ Every 5 minutes the workflow calls the service and **only if a rabbit
 is recognized** notifies **all subscribed Telegram users**:
 
 ```
-Schedule (5 min) → HTTP GET http://192.168.178.106:8011/recognize
+Schedule (5 min) → HTTP GET http://pi4:8011/recognize
   → IF $json.rabbit == true
       true:  base64 `image` → binary → one item per user with images on
             → Telegram sendPhoto (ohne Text)
@@ -142,6 +140,33 @@ All Telegram text responses have n8n attribution disabled
   explicitly in the "Abonnement bestätigen" node, so they no longer
   depend on a missing `text` field from the command code node.
 
+## `rabbit-recognition-discord.json` — Discord fixed-channel notification
+
+Discord analog of the Telegram workflow, but **without user commands**.
+Every 5 minutes the workflow calls RabbitRecognition and, **only if a
+rabbit is recognized**, sends the frame as a file upload to one fixed
+Discord server channel selected in the `Bild an Discord senden` node.
+
+```
+Schedule (5 min) → HTTP GET http://pi4:8011/recognize
+  → IF $json.rabbit == true
+      true:  base64 `image` → binary → Discord send to fixed channel
+      false: NoOp (nothing is sent)
+```
+
+### Setup
+
+1. Create/select a standard **Discord API** credential (Bot Token).
+2. Import `rabbit-recognition-discord.json`.
+3. In `Bild an Discord senden`, select the Discord API credential and
+   set the fixed `guildId` and `channelId` of the target channel.
+4. Activate the workflow.
+
+The workflow intentionally has no `Discord Kommandos` trigger, no Data
+Table subscription nodes, and no `/start`, `/stop`, `/status`,
+`/chatId`, or `/hilfe` handling. Images are always sent to the fixed
+channel; users cannot currently control that via Discord.
+
 ## `rabbit-recognition-flow.json` — frame persistence
 
 Same trigger/call/gate, but the true branch saves the frame to disk
@@ -165,3 +190,10 @@ sending it to Telegram. Use both, one, or neither.
       reflects each user's own setting
 - [ ] A recognized rabbit delivers a photo (users with `/start`);
       users with `/stop` receive nothing — never text
+
+Discord workflow (optional):
+
+- [ ] Standard Discord API credential created
+- [ ] `Bild an Discord senden` has the fixed `guildId` and `channelId`
+- [ ] Workflow activated; a recognized rabbit delivers a photo to the
+      fixed channel

@@ -12,15 +12,18 @@
           ]
         }
       },
-      "id": "cccc64e7-03b9-42a2-8da5-94ba6e91b40a",
+      "id": "d3603850-8436-45d0-bc60-db1a12db77c3",
       "name": "Alle 5 Minuten",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [432, 2440]
+      "position": [
+        864,
+        2928
+      ]
     },
     {
       "parameters": {
-        "url": "http://192.168.178.106:8011/recognize",
+        "url": "http://pi4:8011/recognize",
         "options": {
           "response": {
             "response": {
@@ -30,11 +33,14 @@
           "timeout": 60000
         }
       },
-      "id": "82641b94-e700-40ad-a965-b5e12d26aa46",
+      "id": "9ebd9441-c54a-49b4-ade3-2dd879f47fa3",
       "name": "RabbitRecognition anfragen",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [656, 2440]
+      "position": [
+        1088,
+        2928
+      ]
     },
     {
       "parameters": {
@@ -42,7 +48,8 @@
           "options": {
             "caseSensitive": true,
             "leftValue": "",
-            "typeValidation": "loose"
+            "typeValidation": "strict",
+            "version": 1
           },
           "conditions": [
             {
@@ -57,37 +64,48 @@
                 "values": []
               }
             }
-          ]
+          ],
+          "combinator": "and"
         },
         "options": {}
       },
-      "id": "a1cd7914-ef3a-40de-9c66-021907dd7684",
+      "id": "69fd5bf3-75f0-4e88-981b-531ed67bb003",
       "name": "Hase erkannt?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [880, 2440]
+      "position": [
+        1312,
+        2928
+      ]
     },
     {
       "parameters": {
         "operation": "toBinary",
         "sourceProperty": "image",
-        "options": {}
+        "options": {},
+        "binaryPropertyName": "image"
       },
-      "id": "beca6ea5-941e-4ee5-bbd7-33d05c3b23fa",
+      "id": "d76a52d3-2822-4907-93a9-f16b8720566b",
       "name": "Bild aus Base64",
       "type": "n8n-nodes-base.convertToFile",
       "typeVersion": 1.1,
-      "position": [1104, 2344]
+      "position": [
+        1536,
+        2832
+      ]
     },
     {
       "parameters": {
         "jsCode": "const time = new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC';\nreturn $input.all()\n  .filter((item) => (item.json.images === true || item.json.images === 'true') && item.binary?.image)\n  .map((item) => ({\n    json: {\n      chatId: String(item.json.chatId ?? ''),\n      time,\n    },\n    binary: { image: item.binary.image },\n  }));"
       },
-      "id": "bf77ef80-346f-4a3b-a874-c4d83764d872",
+      "id": "d448726b-7674-48d9-90de-49f50c0ae794",
       "name": "Empfänger auflösen",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1776, 2344]
+      "position": [
+        2208,
+        2832
+      ]
     },
     {
       "parameters": {
@@ -95,18 +113,16 @@
         "chatId": "={{ $json.chatId }}",
         "binaryData": true,
         "binaryPropertyName": "image",
-        "additionalFields": {
-          "appendAttribution": false
-        },
-        "options": {
-          "appendAttribution": false
-        }
+        "additionalFields": {}
       },
-      "id": "da623bc3-fac5-43d9-bb6b-81bae872580c",
+      "id": "3b99f75a-8a3e-4679-ae8b-c3d6d6bc2a0b",
       "name": "Bild an Telegram senden",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
-      "position": [2000, 2344],
+      "position": [
+        2432,
+        2832
+      ],
       "webhookId": "49ccb6f7-7e63-47e7-8d11-54c931466258",
       "credentials": {
         "telegramApi": {
@@ -117,11 +133,14 @@
     },
     {
       "parameters": {},
-      "id": "a4d62d1d-3025-4c20-8951-cbdc1f9ea356",
+      "id": "6b57f3d4-4f7b-4992-8f89-e712ed5deb49",
       "name": "Kein Hase",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [1104, 2536]
+      "position": [
+        1536,
+        3024
+      ]
     },
     {
       "parameters": {
@@ -130,11 +149,14 @@
         ],
         "additionalFields": {}
       },
-      "id": "06e4c501-daa0-4c17-8115-8f734c5f1cdf",
+      "id": "f28dbcea-5a20-47a1-acc1-81c71934e36e",
       "name": "Telegram Kommandos",
       "type": "n8n-nodes-base.telegramTrigger",
       "typeVersion": 1.2,
-      "position": [432, 3000],
+      "position": [
+        672,
+        3488
+      ],
       "webhookId": "5c6d7e8f-0a1b-4c2d-9e3f-4a5b6c7d8e9f",
       "credentials": {
         "telegramApi": {
@@ -144,24 +166,30 @@
       }
     },
     {
-      "id": "9c4e8e6f-1a2b-4c3d-8e9f-0a1b2c3d4e5f",
+      "parameters": {
+        "jsCode": "// Hier die Telegram-Chat-IDs eintragen, die den Bot nutzen dürfen.\nconst allowedChatIds = ['632078830'];\n\nconst input = $input.first().json;\nconst message = input.message ?? {};\nconst chatId = String(message.chat?.id ?? '');\n\nreturn [{\n  json: {\n    chatId,\n    message,\n    isAllowed: allowedChatIds.length > 0 ? allowedChatIds.includes(chatId) : true,\n  },\n}];"
+      },
+      "id": "c7833d35-5d44-4f34-b2d9-65bc3705371e",
       "name": "Zugriff prüfen",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [544, 3000],
-      "parameters": {
-        "jsCode": "// Hier die Telegram-Chat-IDs eintragen, die den Bot nutzen dürfen.\nconst allowedChatIds = ['632078830'];\n\nconst input = $input.first().json;\nconst message = input.message ?? {};\nconst chatId = String(message.chat?.id ?? '');\n\nreturn [{\n  json: {\n    chatId,\n    message,\n    isAllowed: allowedChatIds.length > 0 ? allowedChatIds.includes(chatId) : true,\n  },\n}];"
-      }
+      "position": [
+        880,
+        3488
+      ]
     },
     {
       "parameters": {
         "jsCode": "const input = $input.first().json;\nconst message = input.message ?? {};\nconst chatId = String(input.chatId ?? '');\nconst rawText = String(message.text ?? '').trim();\nconst command = (rawText.split(/\\s+/)[0] ?? '').toLowerCase().split('@')[0];\n\nif (!chatId) return [];\n\nif (command === '/chatid') {\n  return [{ json: { chatId, text: chatId, command, route: 0 } }];\n}\n\nif (!input.isAllowed) {\n  return [{ json: { chatId, command, route: 1, text: 'Deine Telegram-ID ist nicht freigeschaltet. Nutze /chatid, um deine ID zu erhalten, und lass sie im n8n Flow freischalten.' } }];\n}\n\nif (command === '') return [];\n\nif (command === '/hilfe') {\n  return [{ json: {\n    chatId,\n    command,\n    route: 0,\n    text: 'Befehle:\\n/start – Fotos an\\n/stop – Fotos aus\\n/status – aktueller Status\\n/chatid – deine Telegram-ID anzeigen',\n  } }];\n}\n\nif (command === '/start') return [{ json: { chatId, command, images: true, route: 2 } }];\nif (command === '/stop') return [{ json: { chatId, command, images: false, route: 3 } }];\nif (command === '/status') return [{ json: { chatId, command, route: 4 } }];\n\nreturn [{ json: { chatId, command, route: 5, text: 'Unbekannter Befehl. Nutze /hilfe, /start, /stop, /status oder /chatid.' } }];"
       },
-      "id": "1e40bdec-2a7f-4620-b5f6-a6fc707736fe",
+      "id": "db845710-d534-4080-81ec-9cdbae6a7c96",
       "name": "Kommandos verarbeiten",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [656, 3000]
+      "position": [
+        1088,
+        3488
+      ]
     },
     {
       "parameters": {
@@ -169,16 +197,16 @@
         "text": "={{ $json.text }}",
         "additionalFields": {
           "appendAttribution": false
-        },
-        "options": {
-          "appendAttribution": false
         }
       },
-      "id": "43b03997-d341-4c91-a65f-44b4cdeb4301",
+      "id": "ec337463-8e6b-491f-a44c-e6f234a9e413",
       "name": "Kommando bestätigen",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
-      "position": [1104, 3264],
+      "position": [
+        1536,
+        3744
+      ],
       "webhookId": "215cd41e-84c8-497f-82b3-bb07e72ca3fd",
       "credentials": {
         "telegramApi": {
@@ -193,11 +221,14 @@
         "numberOutputs": 6,
         "output": "={{ $json.route }}"
       },
-      "id": "3c35fae2-4184-4253-8b94-af5a5de99266",
+      "id": "b189194a-da55-49c2-9875-f9330afa012b",
       "name": "Befehle routen",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.4,
-      "position": [880, 2936]
+      "position": [
+        1312,
+        3424
+      ]
     },
     {
       "parameters": {
@@ -246,11 +277,14 @@
         },
         "options": {}
       },
-      "id": "446da366-7359-45ec-84e4-c0bb65d196d7",
+      "id": "01ce13b2-7d38-44a9-907a-d6d05b7f8e9d",
       "name": "Abonnement speichern",
       "type": "n8n-nodes-base.dataTable",
       "typeVersion": 1.1,
-      "position": [1104, 3072]
+      "position": [
+        1536,
+        3552
+      ]
     },
     {
       "parameters": {
@@ -258,16 +292,16 @@
         "text": "={{ $('Kommandos verarbeiten').first().json.command === '/stop' ? '⏸ Bilder aus: Ich schicke dir nichts.' : '📷 Bilder an: Ich schicke dir Bilder, wenn ein Hase entdeckt wird.' }}",
         "additionalFields": {
           "appendAttribution": false
-        },
-        "options": {
-          "appendAttribution": false
         }
       },
-      "id": "cdc688bc-5e48-4916-ace3-2ff895f9d9ed",
+      "id": "25862880-dbdf-4c88-9adb-57d752120982",
       "name": "Abonnement bestätigen",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
-      "position": [1328, 3072],
+      "position": [
+        1760,
+        3552
+      ],
       "webhookId": "883af2d3-aa5f-4d33-ab46-50b441d24619",
       "credentials": {
         "telegramApi": {
@@ -296,11 +330,14 @@
         },
         "limit": 1
       },
-      "id": "cede1331-99fe-4dff-9642-13acfcb1fe8b",
+      "id": "df934dd3-c728-4bab-98f9-8f4b7e8c98d4",
       "name": "Status laden",
       "type": "n8n-nodes-base.dataTable",
       "typeVersion": 1.1,
-      "position": [1104, 2760]
+      "position": [
+        1536,
+        3248
+      ]
     },
     {
       "parameters": {
@@ -315,21 +352,27 @@
           "includeUnpaired": true
         }
       },
-      "id": "c3217ebf-4404-4383-8223-176b4f0f3ee2",
+      "id": "0070a7d3-c00a-4128-b0c8-4bae1fb5ed51",
       "name": "Status zusammenführen",
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
-      "position": [1328, 2832]
+      "position": [
+        1760,
+        3312
+      ]
     },
     {
       "parameters": {
         "jsCode": "const item = $input.first().json;\nconst chatId = String(item.chatId ?? '');\nconst hasRow = 'images' in item || 'updatedAt' in item;\nconst images = item.images === true || item.images === 'true';\nlet text;\nif (!hasRow) {\n  text = 'Für ' + chatId + ' ist noch nichts gespeichert. Nutze /start oder /stop.';\n} else if (images) {\n  text = '📷 Bilder an: Ich schicke dir Bilder, wenn ein Hase entdeckt wird.';\n} else {\n  text = '⏸ Bilder aus: Ich schicke dir nichts.';\n}\nreturn [{ json: { chatId, text } }];"
       },
-      "id": "a841c1fa-28c9-4465-a235-271f0eb775a9",
+      "id": "196761ab-f524-4fa1-b8f8-78bc7549bdb4",
       "name": "Status anzeigen",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1552, 2832]
+      "position": [
+        1984,
+        3312
+      ]
     },
     {
       "parameters": {
@@ -337,16 +380,16 @@
         "text": "={{ $json.text }}",
         "additionalFields": {
           "appendAttribution": false
-        },
-        "options": {
-          "appendAttribution": false
         }
       },
-      "id": "ed7e3be9-8b4a-4907-8a4e-42bad63b0690",
+      "id": "139832f2-830e-45e7-8546-ad7b0a7f55dd",
       "name": "Status antworten",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
-      "position": [1776, 2832],
+      "position": [
+        2208,
+        3312
+      ],
       "webhookId": "dc86d46d-9549-43f6-b87d-6c716f3eab5b",
       "credentials": {
         "telegramApi": {
@@ -375,11 +418,14 @@
         },
         "returnAll": true
       },
-      "id": "31b0cfb0-6e11-490a-a579-14ebc38260c3",
+      "id": "5fe401f0-5dbc-4bcc-8d44-4205a044cf3a",
       "name": "Aktive Empfänger laden",
       "type": "n8n-nodes-base.dataTable",
       "typeVersion": 1.1,
-      "position": [1328, 2272]
+      "position": [
+        1760,
+        2752
+      ]
     },
     {
       "parameters": {
@@ -393,11 +439,14 @@
           }
         }
       },
-      "id": "a2559d8b-63f6-4384-8e0e-fd3dd76cb511",
+      "id": "c65187a0-c8a0-463a-babd-be8d0d23fb47",
       "name": "Empfänger kombinieren",
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
-      "position": [1552, 2344]
+      "position": [
+        1984,
+        2832
+      ]
     }
   ],
   "connections": {
@@ -622,7 +671,8 @@
   "settings": {
     "executionOrder": "v1",
     "availableInMCP": false,
-    "callerPolicy": "workflowsFromSameOwner"
+    "callerPolicy": "workflowsFromSameOwner",
+    "timeSavedMode": "fixed"
   },
   "pinData": {}
 }

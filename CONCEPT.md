@@ -23,10 +23,10 @@ there again.
 ## 2. Architecture & topology
 
 ```
-n8n (Docker, 192.168.178.106:5678, bridge network n8n-net)
+n8n (Docker, pi4:5678, bridge network n8n-net)
   │  HTTP GET (schedule or webhook trigger)
   ▼
-RabbitRecognition (rc.local + Taskfile, 192.168.178.106, 0.0.0.0:8011)
+RabbitRecognition (rc.local + Taskfile, pi4, 0.0.0.0:8011)
   │  MJPEG GET /mjpeg (same LAN)
   ▼
 Hasen-Stream backend (192.168.178.135, 0.0.0.0:8000)
@@ -40,8 +40,8 @@ Key facts (verified 2026-09-11/12):
 - n8n runs in Docker on a bridge network (`n8n-net`), port published as
   `5678:5678`, no `extra_hosts` → from inside the container
   `localhost`/`127.0.0.1` reach the container, **not** the host.
-- Therefore n8n must call the **host LAN IP**:
-  `http://192.168.178.106:8011/recognize` (preferred, no repo change).
+- Therefore n8n should call the service via the resolvable hostname
+  `http://pi4:8011/recognize` (preferred, no repo change).
 - Alternative: add `extra_hosts: ["host.docker.internal:host-gateway"]`
   to the n8n compose, then use
   `http://host.docker.internal:8011/recognize`.
@@ -170,12 +170,13 @@ RabbitRecognition/
 └── n8n/
     ├── README.md                       # import/setup/migration docs
     ├── rabbit-recognition-flow.json    # importable n8n workflow (frame persistence)
-    └── rabbit-recognition-telegram.json  # importable n8n workflow (Telegram + commands)
+    ├── rabbit-recognition-telegram.json  # importable n8n workflow (Telegram + commands)
+    └── rabbit-recognition-discord.json   # importable n8n workflow (Discord fixed channel)
 ```
 
 ## 7. n8n workflows
 
-Two importable files (n8n UI: *Workflows → Import from File*; fixed
+Three importable files (n8n UI: *Workflows → Import from File*; fixed
 UUIDs, importable as-is; see [`n8n/README.md`](n8n/README.md) for setup
 and migration steps):
 
@@ -186,27 +187,34 @@ Telegram command flow). Two branches:
 
 1. **Scheduled recognition** (top):
    1. **Schedule trigger** — every 5 minutes (user-adjustable).
-   2. **HTTP Request** — `GET http://192.168.178.106:8011/recognize`
+   2. **HTTP Request** — `GET http://pi4:8011/recognize`
       (options: never fail; on failure the workflow just stops).
    3. **IF** — `body.rabbit == true`.
-   4. **true branch**: base64 `body.image` → binary → pause check
-      (workflow static data `telegramPaused`) → **Telegram sendPhoto**
-      (image only, no caption).
+   4. **true branch**: base64 `body.image` → binary → Data Table
+      `rabbit_subscriptions` → **Telegram sendPhoto** to chats with
+      `images = true` (image only, no caption).
    5. **false branch**: NoOp (nothing is sent).
 2. **Telegram commands** (bottom):
    1. **Telegram Trigger** (message updates, chat/user filtered).
-   2. **Code** — author check (only chat/user `632078830` may control),
-      `/stop` (pause), `/start` (resume), `/status`; state in workflow
-      static data.
+   2. **Code** — access check against `allowedChatIds`, then
+      `/stop`, `/start`, `/status`, `/chatid`, `/hilfe`; subscription
+      state in Data Table `rabbit_subscriptions`.
    3. **Telegram sendText** — confirmation.
 
 Note: activating this workflow takes over the bot's Telegram webhook,
 so the old flows must be deactivated/deleted first.
 
+### `rabbit-recognition-discord.json` (Discord fixed channel)
+
+Discord analog of the Telegram workflow, but without user commands:
+scheduled recognition and, if a rabbit is recognized, delivery of the
+frame as a file upload to one fixed Discord server channel selected in
+the `Bild an Discord senden` node.
+
 ### `rabbit-recognition-flow.json` (frame persistence)
 
 1. **Schedule trigger** — every 5 minutes.
-2. **HTTP Request** — `GET http://192.168.178.106:8011/recognize`
+2. **HTTP Request** — `GET http://pi4:8011/recognize`
    (never fail).
 3. **IF** — `body.rabbit == true`.
 4. **true branch**: Move Binary Data (base64 `body.image` → binary) →

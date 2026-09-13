@@ -20,7 +20,7 @@
     },
     {
       "parameters": {
-        "url": "http://192.168.178.106:8011/recognize",
+        "url": "http://pi4:8011/recognize",
         "options": {
           "timeout": 60000
         }
